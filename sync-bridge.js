@@ -183,6 +183,18 @@ function mergeNotif(row, avisar){
      duplica en Avisos. Solo aplica a viaje_nuevo: un viaje solo se publica
      una vez; los mensajes sí se repiten y no se tocan. */
   if (row.tipo === "viaje_nuevo" && localTripId != null && notifs.some(n => n.userId === me.id && n.tripId === localTripId && n.titulo === tituloDeTipo(row.tipo))) return;
+  /* Aceptación duplicada: al aceptar, el conductor crea un aviso local
+     detallado (precio + auto) y la capa Supabase crea la fila remota
+     (texto corto). En Avisos queda un solo aviso por viaje: el de texto
+     más largo. Si la fila entrante es más larga, reemplaza al existente;
+     si no, se descarta. */
+  if (row.tipo === "viaje_aceptado" && localTripId != null){
+    const idx = notifs.findIndex(n => n.userId === me.id && n.tripId === localTripId && n.titulo === tituloDeTipo(row.tipo));
+    if (idx !== -1){
+      if ((notifs[idx].texto || "").length >= (row.texto || "").length) return;
+      notifs.splice(idx, 1);
+    }
+  }
   const n = { id: "n" + Date.now() + Math.floor(Math.random() * 999), rid, userId: me.id, titulo: tituloDeTipo(row.tipo), texto: row.texto, tripId: localTripId, ts: row.created_at ? Date.parse(row.created_at) : Date.now(), leida: !!row.leida };
   notifs.unshift(n);
   guardar(K.notifs, notifs);
