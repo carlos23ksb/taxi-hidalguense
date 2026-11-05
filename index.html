@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Taxi Hidalguense" />
-<meta name="description" content="Taxi Hidalguense — Pide tu viaje en Pachuca, negocia el precio dentro de la app, chatea con tu conductor y califica cada viaje." />
+<meta name="description" content="Taxi Hidalguense — Pide tu viaje en Pachuca con precio fijo según la tarifa, chatea con tu conductor y califica cada viaje." />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
 <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -181,7 +181,6 @@ select.in{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .calc-lines .total{font-size:18px;font-weight:900;color:var(--gold-2);border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
 .st{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:4px 9px;border-radius:999px;display:inline-block;white-space:nowrap}
 .st-buscando{background:rgba(212,175,55,.2);color:var(--gold-2)}
-.st-contra{background:var(--info-bg);color:var(--info)}
 .st-aceptado,.st-curso{background:var(--ok-bg);color:#5fd79a}
 .st-fin{background:var(--card-2);color:var(--muted);border:1px solid var(--line)}
 .st-cancel{background:var(--danger-bg);color:#ff8a8e}
@@ -215,6 +214,9 @@ select.in{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .notif.unread{background:rgba(212,175,55,.06)}
 .notif .dot{width:9px;height:9px;border-radius:50%;background:var(--danger);flex:0 0 auto;margin-top:6px}
 .notif-list{padding:0;overflow:hidden}
+.aviso-permiso{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:12px 16px 0;padding:12px 14px;border:1px solid var(--gold);border-radius:14px;background:rgba(212,175,55,.1);font-size:13px}
+.aviso-permiso b{display:block;font-size:13.5px}
+.aviso-permiso span{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .profile-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 .avatar{width:58px;height:58px;border-radius:50%;background:#000;color:var(--gold-2);border:2px solid var(--gold);display:grid;place-items:center;font-weight:800;font-size:22px;flex:0 0 auto;overflow:hidden}
 .avatar img{width:100%;height:100%;object-fit:cover}
@@ -291,6 +293,14 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
   </div>
 </header>
 
+<div id="aviso-notifs" class="aviso-permiso" style="display:none;">
+  <div>
+    <b>Activa las notificaciones para no perderte solicitudes, viajes y avisos.</b>
+    <span>En tu navegador: toca el candado junto a la dirección → Permisos del sitio → Notificaciones → Permitir. O toca el botón.</span>
+  </div>
+  <button class="mini-btn primary" type="button" id="btn-activar-notifs">Activar notificaciones</button>
+</div>
+
 <!-- ===== Vista: Acceso ===== -->
 <main class="view active" id="view-auth">
   <div class="dl-hero" data-bloque-descarga id="descarga-libre">
@@ -316,10 +326,10 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
   <div class="auth-hero">
     <div class="auth-hero-in">
       <span class="rol-badge">Plataforma de viajes · Pachuca</span>
-      <h2>Pide tu taxi, <span class="y">negocia el precio</span> y viaja seguro.</h2>
-      <p>Clientes y conductores en una sola aplicación: el precio se acuerda dentro de la app, hablas con tu conductor por el chat interno y calificas cada viaje.</p>
+      <h2>Pide tu taxi con <span class="y">precio fijo</span> y viaja seguro.</h2>
+      <p>Clientes y conductores en una sola aplicación: el precio es fijo según la tarifa y lo ves calculado antes de pedir tu viaje, hablas con tu conductor por el chat interno y calificas cada viaje.</p>
       <div class="auth-feats">
-        <div><b>Precio negociado</b>Tú ofreces o el conductor propone</div>
+        <div><b>Precio fijo</b>Según la tarifa, sin sorpresas</div>
         <div><b>Chat interno</b>Sin salir de la aplicación</div>
         <div><b>Datos del auto</b>Placa, color y modelo a la vista</div>
         <div><b>Calificaciones</b>Conductores y clientes se califican</div>
@@ -347,7 +357,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         <div id="form-login">
           <div class="field">
             <label for="li-telefono">Teléfono de tu cuenta</label>
-            <input class="in" type="tel" id="li-telefono" placeholder="Ej. 771 000 0000" autocomplete="tel" />
+            <input class="in" type="tel" id="li-telefono" placeholder="Tu número de 10 dígitos" autocomplete="tel" />
           </div>
           <div class="field">
             <label for="li-pass">Contraseña</label>
@@ -357,10 +367,9 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
           <button class="btn btn-gold btn-block" type="submit">Iniciar sesión</button>
           <p class="auth-switch">¿Aún no tienes cuenta? <button type="button" id="go-register">Regístrate aquí</button></p>
           <div class="divider"></div>
-          <p class="hint" style="text-align:center;margin:0 0 4px;">¿Solo quieres ver cómo funciona? Entra con una cuenta de muestra:</p>
+          <p class="hint" style="text-align:center;margin:0 0 4px;">¿Solo quieres ver cómo funciona? Entra con la cuenta de muestra de cliente:</p>
           <div class="demo-acc">
             <button type="button" id="demo-cliente">Entrar como cliente de muestra</button>
-            <button type="button" id="demo-conductor">Entrar como conductor de muestra</button>
           </div>
         </div>
       </form>
@@ -373,7 +382,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
           </div>
           <div class="field">
             <label for="rg-telefono">Teléfono de tu cuenta</label>
-            <input class="in" type="tel" id="rg-telefono" placeholder="Ej. 771 000 0000" autocomplete="tel" />
+            <input class="in" type="tel" id="rg-telefono" placeholder="Tu número de 10 dígitos" autocomplete="tel" />
             <p class="hint">Es el número con el que iniciarás sesión. La comunicación con tu conductor o cliente se hace por el chat de la aplicación.</p>
           </div>
           <div class="field">
@@ -416,15 +425,47 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         </div>
       </form>
 
-      <div class="owner-box">
+      <div class="owner-box" id="owner-box">
         <h3>Acceso del dueño</h3>
-        <p>El dueño entra solo con su número. Sin contraseña y sin ningún paso extra: escribe el número y entra directo al panel de administración.</p>
+        <p>La primera vez, el dueño escribe su número y crea su contraseña. Después entra con su número y su contraseña. Solo el número registrado como dueño puede entrar aquí.</p>
         <form id="form-owner-el" novalidate>
           <div class="field" style="margin-bottom:10px;">
             <label for="owner-telefono">Número del dueño</label>
             <input class="in" type="tel" id="owner-telefono" placeholder="Ej. 771 291 3066" autocomplete="tel" inputmode="numeric" />
           </div>
           <div class="err" id="owner-err"></div>
+          <button class="btn btn-dark btn-block" type="submit">Continuar</button>
+        </form>
+        <div id="crear-pass-dueno" style="display:none;margin-top:14px;">
+          <h3 style="margin-bottom:6px;">Crea tu contraseña</h3>
+          <p class="hint" style="margin-bottom:10px;">Es la contraseña del dueño. Guárdala bien: solo tú la sabes.</p>
+          <form id="form-crear-pass-el" novalidate>
+            <div class="field" style="margin-bottom:10px;">
+              <label for="dueno-pass1">Contraseña (mínimo 6 caracteres)</label>
+              <input class="in" type="password" id="dueno-pass1" autocomplete="new-password" />
+            </div>
+            <div class="field" style="margin-bottom:10px;">
+              <label for="dueno-pass2">Confirma tu contraseña</label>
+              <input class="in" type="password" id="dueno-pass2" autocomplete="new-password" />
+            </div>
+            <div class="err" id="crear-pass-err"></div>
+            <button class="btn btn-gold btn-block" type="submit">Crear contraseña y entrar</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="owner-box" id="acceso-dueno-compacto" style="display:none;">
+        <h3>Acceso del dueño</h3>
+        <form id="form-owner-compacto-el" novalidate>
+          <div class="field" style="margin-bottom:10px;">
+            <label for="owner-compacto-telefono">Número del dueño</label>
+            <input class="in" type="tel" id="owner-compacto-telefono" placeholder="Ej. 771 291 3066" autocomplete="tel" inputmode="numeric" />
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label for="owner-compacto-pass">Contraseña</label>
+            <input class="in" type="password" id="owner-compacto-pass" autocomplete="current-password" />
+          </div>
+          <div class="err" id="owner-compacto-err"></div>
           <button class="btn btn-dark btn-block" type="submit">Entrar como dueño</button>
         </form>
       </div>
@@ -448,7 +489,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         <h3>La app en tu pantalla de inicio</h3>
         <p>Descárgala una vez y entra con un toque.</p>
       </div>
-      <button class="btn" data-instalar>Instalar</button>
+      <a class="btn" href="taxi-hidalguense-v5.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
     </div>
     <ol class="install-steps" id="install-steps-home" style="display:none;">
       <li>En <b>Android</b>: menú del navegador (⋮) → <b>«Instalar app»</b> o «Agregar a pantalla de inicio».</li>
@@ -524,12 +565,12 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
   </section>
 
   <section class="blk">
-    <div class="sec-head"><h2>Así se acuerda el precio</h2></div>
+    <div class="sec-head"><h2>Así funciona el precio fijo</h2></div>
     <div class="card">
       <div class="steps">
-        <div class="step"><span class="step-n">1</span><div><b>El cliente pide su viaje</b><span>Puede ofrecer su precio o pedir que el conductor ponga el suyo.</span></div></div>
-        <div class="step"><span class="step-n">2</span><div><b>El conductor responde</b><span>Acepta el precio, lo rechaza o propone otro dentro de la app, con botones grandes a la vista.</span></div></div>
-        <div class="step"><span class="step-n">3</span><div><b>Ambos confirman</b><span>Cuando los dos aceptan, el viaje queda confirmado con el precio final y los datos del auto.</span></div></div>
+        <div class="step"><span class="step-n">1</span><div><b>El cliente pide su viaje</b><span>Ve el precio fijo calculado según la tarifa antes de pedirlo.</span></div></div>
+        <div class="step"><span class="step-n">2</span><div><b>El conductor responde</b><span>Acepta el viaje o lo rechaza dentro de la app, con botones grandes a la vista.</span></div></div>
+        <div class="step"><span class="step-n">3</span><div><b>Viaje confirmado</b><span>Al aceptar, el viaje queda confirmado con el precio fijo y los datos del auto.</span></div></div>
         <div class="step"><span class="step-n">4</span><div><b>Chat y calificación</b><span>Se comunican por el chat interno y al terminar, cliente y conductor se califican.</span></div></div>
       </div>
     </div>
@@ -579,20 +620,10 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         </div>
         <div class="divider"></div>
         <div class="field">
-          <label>¿Quién pone el precio?</label>
-          <div class="seg" role="group" aria-label="Modo de precio">
-            <button type="button" id="modo-ofrezco" class="on">Ofrezco mi precio</button>
-            <button type="button" id="modo-propone">Que lo ponga el conductor</button>
+          <div class="card" style="padding:12px 14px;box-shadow:none;">
+            <b id="precio-fijo-txt">Precio fijo según tarifa</b>
+            <span class="hint" id="precio-fijo-detalle" style="display:block;margin-top:2px;"></span>
           </div>
-          <p class="hint" id="modo-hint">Tú propones cuánto pagar. Los conductores pueden aceptarlo, rechazarlo o contraofertar.</p>
-        </div>
-        <div class="field" id="campo-oferta">
-          <label for="f-oferta">Tu oferta (MXN)</label>
-          <div class="price-input-wrap">
-            <span class="sign">$</span>
-            <input class="in" type="number" id="f-oferta" inputmode="numeric" min="20" step="5" />
-          </div>
-          <p class="hint" id="oferta-hint"></p>
         </div>
         <div class="field">
           <label for="f-notas">Notas para el conductor (opcional)</label>
@@ -629,7 +660,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
 <!-- ===== Vista: Viajes ===== -->
 <main class="view" id="view-viajes">
   <section class="blk">
-    <div class="sec-head"><h2>Viajes en curso y negociación</h2></div>
+    <div class="sec-head"><h2>Viajes en curso</h2></div>
     <div id="lista-activos"></div>
   </section>
   <section class="blk">
@@ -643,7 +674,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
   <section class="blk">
     <div class="sec-head"><h2>Notificaciones</h2><button class="link" id="btn-leer-todo" type="button">Marcar todo leído</button></div>
     <div class="card notif-list" id="lista-notifs"></div>
-    <p class="hint" style="margin-top:10px;">Aquí llegan los avisos de tu actividad: solicitudes nuevas, ofertas y contraofertas, viajes aceptados, mensajes del chat y calificaciones. Todo se mueve dentro de la aplicación.</p>
+    <p class="hint" style="margin-top:10px;">Aquí llegan los avisos de tu actividad: solicitudes nuevas, viajes aceptados y rechazados, mensajes del chat y calificaciones. Todo se mueve dentro de la aplicación.</p>
   </section>
 </main>
 
@@ -713,7 +744,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
   </section>
 </main>
 
-<!-- ===== Vista: Admin (solo dueño, por número) ===== -->
+<!-- ===== Vista: Admin (solo dueño, con número y contraseña) ===== -->
 <main class="view" id="view-admin">
   <section class="blk">
     <div class="sec-head"><h2>Panel del dueño</h2><span class="rol-badge dueno">Dueño</span></div>
@@ -797,8 +828,8 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
 "use strict";
 /* ============================================================
    TAXI HIDALGUENSE V5 · Plataforma de viajes (demo local)
-   Tarifas, conductores cercanos, negociación en ambos sentidos,
-   chat interno, reseñas y panel del dueño por número.
+   Tarifas con precio fijo, conductores cercanos reales,
+   chat interno, reseñas y panel del dueño con número y contraseña.
    ============================================================ */
 const NEGOCIO = "Taxi Hidalguense";
 const OWNER_DIGITS = "7712913066";
@@ -847,44 +878,62 @@ function estaCastigado(u){ return !!(u && u.suspendedUntil && Number(u.suspended
 function conductorVisible(u){ return u && u.rol === "conductor" && u.activo !== false && !estaCastigado(u); }
 
 /* ---------- Almacenamiento en este celular ---------- */
-const K = { users: "th5_users", sesion: "th5_sesion", trips: "th5_trips", notifs: "th5_notifs", msgs: "th5_msgs", avail: "th5_avail", loc: "th5_loc" };
+const K = { users: "th5_users", sesion: "th5_sesion", trips: "th5_trips", notifs: "th5_notifs", msgs: "th5_msgs", avail: "th5_avail", loc: "th5_loc", duenoPass: "th5_dueno_pass" };
 function cargar(clave, def){ try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
 function guardar(clave, val){ try { localStorage.setItem(clave, JSON.stringify(val)); } catch(e){} }
 
 function asegurarSemilla(){
+  const sembrados = new Set();
   let users = cargar(K.users, null);
   if (!users){
     users = [
       { id: "u-dueno", rol: "dueno", nombre: "Dueño", telefono: "7712913066", pass: "", activo: true },
-      { id: "u-cliente-demo", rol: "cliente", nombre: "María González", telefono: "7710000001", pass: "demo" },
-      { id: "u-cond-demo", rol: "conductor", nombre: "Jorge Ramírez", telefono: "7710000002", pass: "demo", placa: "A-482-TGH", color: "Blanco", modelo: "Nissan Versa 2022", economico: "045", vehiculoTipo: "sedan", foto: null, lat: 20.1210, lng: -98.7320, activo: true, suspendedUntil: null },
-      { id: "u-cond-2", rol: "conductor", nombre: "Luis Hernández", telefono: "7710000012", pass: "demo", placa: "H-913-PKL", color: "Rojo", modelo: "Nissan Tsuru 2019", economico: "112", vehiculoTipo: "sedan", foto: null, lat: 20.1150, lng: -98.7250, activo: true, suspendedUntil: null },
-      { id: "u-cond-3", rol: "conductor", nombre: "Ana Torres", telefono: "7710000013", pass: "demo", placa: "B-207-MNX", color: "Gris plata", modelo: "Chevrolet Aveo 2023", economico: "078", vehiculoTipo: "sedan", foto: null, lat: 20.1280, lng: -98.7400, activo: true, suspendedUntil: null },
-      { id: "u-cond-4", rol: "conductor", nombre: "Carlos Mendoza", telefono: "7710000014", pass: "demo", placa: "C-664-QRS", color: "Negro", modelo: "Toyota Corolla 2021", economico: "203", vehiculoTipo: "sedan", foto: null, lat: 20.1080, lng: -98.7180, activo: true, suspendedUntil: null },
-      { id: "u-cond-5", rol: "conductor", nombre: "Pedro Sánchez", telefono: "7710000015", pass: "demo", placa: "D-118-ZXC", color: "Blanco", modelo: "Nissan Versa 2020", economico: "310", vehiculoTipo: "sedan", foto: null, lat: 20.1190, lng: -98.7300, activo: true, suspendedUntil: Date.now() + 3 * 86400000 },
-      { id: "u-cond-6", rol: "conductor", nombre: "Miguel Ángel Ruiz", telefono: "7710000016", pass: "demo", placa: "E-552-RTY", color: "Gris", modelo: "Chevrolet Onix 2022", economico: "421", vehiculoTipo: "sedan", foto: null, lat: 20.1220, lng: -98.7350, activo: false, suspendedUntil: null },
-      { id: "u-cli-2", rol: "cliente", nombre: "Fernanda López", telefono: "7710000021", pass: "demo" },
-      { id: "u-cli-3", rol: "cliente", nombre: "Roberto Díaz", telefono: "7710000022", pass: "demo" }
+      { id: "u-cliente-demo", rol: "cliente", nombre: "María González", telefono: "", pass: "demo" }
     ];
-    guardar(K.users, users);
+        guardar(K.users, users);
   } else {
-    /* Protección: solo el número del dueño puede tener el rol de dueño. */
+    /* Protección: solo el número del dueño puede tener el rol de dueño, y
+       la cuenta del dueño es permanente: si el número del dueño existe
+       con otro rol, vuelve a ser dueño; si falta, se recrea. Además se
+       eliminan los usuarios sembrados de prueba (conductores y clientes),
+       que ya no existen en la app. */
     let cambio = false;
     users.forEach(u => { if (u.rol === "dueno" && !esDueno(u)){ u.rol = "cliente"; cambio = true; } });
+    /* Solo quedan la cuenta del dueño, la cuenta de prueba de cliente y
+       las cuentas reales creadas en la app (id "u-" + fecha). Cualquier
+       otro registro guardado es de prueba y se elimina. */
+    users = users.filter(u => {
+      const real = u.id === "u-dueno" || u.id === "u-cliente-demo" || /^u-\d+$/.test(u.id);
+      if (!real) sembrados.add(u.id);
+      return real;
+    });
+    if (sembrados.size) cambio = true;
+    const duenoGuardado = users.find(u => esDueno(u));
+    if (!duenoGuardado){
+      users.push({ id: "u-dueno", rol: "dueno", nombre: "Dueño", telefono: OWNER_DIGITS, pass: "", activo: true });
+      cambio = true;
+    } else if (duenoGuardado.rol !== "dueno"){
+      duenoGuardado.rol = "dueno"; cambio = true;
+    }
     if (cambio) guardar(K.users, users);
   }
   let trips = cargar(K.trips, null);
   if (!trips){
-    const ahora = Date.now();
-    trips = [
-      { id: ahora - 5400000, clienteId: "u-cli-2", conductorId: null, origen: "Plaza Juárez, Centro", destino: "Plaza Galerías", distanciaKm: 3, foraneo: false, vehiculo: "sedan", pasajeros: 2, modo: "ofrece", precioOferta: 80, precioPropuesta: null, ultimoProponente: null, precioFinal: null, estado: "buscando", notas: "Salimos de la puerta principal de la plaza.", fecha: ahora - 1500000, califConductor: null, califCliente: null },
-      { id: ahora - 5300000, clienteId: "u-cli-3", conductorId: null, origen: "Pachuquilla, calle principal", destino: "Central de Autobuses, puerta 2", distanciaKm: 6, foraneo: false, vehiculo: "sedan", pasajeros: 1, modo: "propone", precioOferta: null, precioPropuesta: null, ultimoProponente: null, precioFinal: null, estado: "buscando", notas: "Llevo una maleta mediana.", fecha: ahora - 900000, califConductor: null, califCliente: null },
-      { id: ahora - 86400000 * 2, clienteId: "u-cliente-demo", conductorId: "u-cond-demo", origen: "Reloj Monumental, Centro", destino: "Blvd. Valle de San Javier 120", distanciaKm: 5, foraneo: false, vehiculo: "sedan", pasajeros: 2, modo: "ofrece", precioOferta: 80, precioPropuesta: null, ultimoProponente: null, precioFinal: 80, estado: "completado", notas: "", fecha: ahora - 86400000 * 2, califConductor: { stars: 5, comentario: "Puntual y muy amable." }, califCliente: { stars: 5, comentario: "Pasajera puntual, todo bien." } },
-      { id: ahora - 86400000 * 5, clienteId: "u-cli-2", conductorId: "u-cond-demo", origen: "Torre de oficinas", destino: "Mineral de la Reforma, Los Tuzos", distanciaKm: 7, foraneo: false, vehiculo: "sedan", pasajeros: 1, modo: "propone", precioOferta: null, precioPropuesta: 100, ultimoProponente: "conductor", precioFinal: 100, estado: "completado", notas: "", fecha: ahora - 86400000 * 5, califConductor: { stars: 5, comentario: "" }, califCliente: { stars: 4, comentario: "" } },
-      { id: ahora - 86400000 * 3, clienteId: "u-cliente-demo", conductorId: "u-cond-2", origen: "Central de Autobuses", destino: "Centro Histórico, Hotel Emily", distanciaKm: 4, foraneo: false, vehiculo: "sedan", pasajeros: 3, modo: "ofrece", precioOferta: 80, precioPropuesta: null, ultimoProponente: null, precioFinal: 80, estado: "completado", notas: "", fecha: ahora - 86400000 * 3, califConductor: { stars: 4, comentario: "Buen viaje." }, califCliente: { stars: 5, comentario: "" } },
-      { id: ahora - 86400000, clienteId: "u-cli-3", conductorId: "u-cond-3", origen: "Av. Principal 45", destino: "Parque Central", distanciaKm: 6, foraneo: false, vehiculo: "sedan", pasajeros: 2, modo: "ofrece", precioOferta: 94, precioPropuesta: null, ultimoProponente: null, precioFinal: 94, estado: "completado", notas: "", fecha: ahora - 86400000, califConductor: { stars: 5, comentario: "Excelente servicio, auto limpio." }, califCliente: { stars: 5, comentario: "" } }
-    ];
+    trips = [];
     guardar(K.trips, trips);
+  } else {
+    /* Limpieza: fuera los viajes de los usuarios sembrados eliminados y
+       normalización de viajes viejos al modelo de precio fijo. */
+    let cambioTrips = false;
+    const antes = trips.length;
+    trips = trips.filter(t => !sembrados.has(t.clienteId) && !sembrados.has(t.conductorId));
+    if (trips.length !== antes) cambioTrips = true;
+    const ESTADOS_VALIDOS = ["buscando", "aceptado", "en_curso", "completado", "cancelado"];
+    trips.forEach(t => {
+      if (!ESTADOS_VALIDOS.includes(t.estado)){ t.estado = "buscando"; cambioTrips = true; }
+      if (t.precioFinal == null){ t.precioFinal = 80; cambioTrips = true; }
+    });
+    if (cambioTrips) guardar(K.trips, trips);
   }
   if (!cargar(K.notifs, null)) guardar(K.notifs, []);
   if (!cargar(K.msgs, null)) guardar(K.msgs, {});
@@ -943,16 +992,36 @@ function htmlResenas(lista, quienTxt){
 /* ---------- Notificaciones ---------- */
 function notificarNavegador(titulo, texto){
   try {
-    if ("Notification" in window && Notification.permission === "granted" && document.hidden){
+    if ("Notification" in window && Notification.permission === "granted"){
       new Notification(titulo, { body: texto, icon: "assets/icon-192.png" });
     }
   } catch(e){}
 }
-function pedirPermisoNotificaciones(){
-  try {
-    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
-  } catch(e){}
+/* Aviso persistente cuando las notificaciones del navegador no están
+   permitidas: se muestra con la sesión iniciada hasta que el permiso
+   queda concedido, con las instrucciones para activarlo. */
+function actualizarAvisoPermiso(){
+  const aviso = $("#aviso-notifs"); if (!aviso) return;
+  let mostrar = false;
+  try { mostrar = ("Notification" in window) && !!yo() && Notification.permission !== "granted"; } catch(e){}
+  aviso.style.display = mostrar ? "" : "none";
 }
+function pedirPermisoNotificaciones(forzar){
+  try {
+    if (!("Notification" in window)){ actualizarAvisoPermiso(); return; }
+    if (Notification.permission === "default" || forzar){
+      const r = Notification.requestPermission();
+      if (r && r.then) r.then(() => actualizarAvisoPermiso()).catch(() => actualizarAvisoPermiso());
+      else actualizarAvisoPermiso();
+    } else {
+      actualizarAvisoPermiso();
+    }
+  } catch(e){ actualizarAvisoPermiso(); }
+}
+$("#btn-activar-notifs").addEventListener("click", () => {
+  pedirPermisoNotificaciones(true);
+  toast("Si el navegador no mostró el permiso, actívalo con el candado junto a la dirección.");
+});
 function notificar(userId, titulo, texto, tripId, esViaje){
   if (!userId) return;
   notifs.unshift({ id: Date.now() + Math.floor(Math.random() * 999), userId, titulo, texto, tripId: tripId || null, ts: Date.now(), leida: false });
@@ -961,7 +1030,7 @@ function notificar(userId, titulo, texto, tripId, esViaje){
   if (me && me.id === userId){
     actualizarBadges();
     toast(titulo + " — " + texto);
-    if (esViaje) notificarNavegador(titulo, texto);
+    notificarNavegador(titulo, texto);
   }
 }
 function misNotifs(){ const me = yo(); return me ? notifs.filter(n => n.userId === me.id) : []; }
@@ -975,12 +1044,7 @@ function actualizarBadges(){
   const me = yo();
   let pendientes = 0;
   if (me){
-    pendientes = trips.filter(t => {
-      if (t.estado !== "contraoferta") return false;
-      if (me.rol === "cliente") return t.clienteId === me.id && t.ultimoProponente === "conductor";
-      if (me.rol === "conductor") return t.conductorId === me.id && t.ultimoProponente === "cliente";
-      return false;
-    }).length;
+    pendientes = trips.filter(t => t.estado === "buscando" && (me.rol === "cliente" ? t.clienteId === me.id : true)).length;
   }
   const tv = $("#tab-n-viajes");
   if (tv){ tv.textContent = pendientes; tv.classList.toggle("show", pendientes > 0); }
@@ -992,7 +1056,7 @@ function toast(msg){
   toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
 }
 
-/* ---------- Navegación (con protección del panel por número) ---------- */
+/* ---------- Navegación (con protección del panel: número + contraseña del dueño) ---------- */
 function irA(vista){
   if (vista === "admin" && !puedeVerAdmin()){
     toast("El panel de administración es solo para el dueño.");
@@ -1004,9 +1068,10 @@ function irA(vista){
   if (vista === "inicio") renderInicio();
   if (vista === "pedir") renderPedir();
   if (vista === "viajes") renderViajes();
-  if (vista === "avisos") renderAvisos();
+  if (vista === "avisos"){ marcarNotifsLeidas(); renderAvisos(); }
   if (vista === "perfil") renderPerfil();
   if (vista === "admin") renderAdmin();
+  actualizarAvisoPermiso();
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-go]");
@@ -1097,6 +1162,8 @@ function entrar(user, esDuenoDirecto){
   actualizarVisibilidadAdmin();
   $("#btn-bell").style.display = "grid";
   pedirPermisoNotificaciones();
+  cercanosVistos = null;
+  actualizarAccesoDueno();
   if (esDuenoDirecto || esDueno(user)){
     irA("admin");
     toast("Bienvenido, Dueño. Panel de administración abierto.");
@@ -1110,6 +1177,39 @@ function entrar(user, esDuenoDirecto){
   irA("inicio");
   toast("Sesión iniciada. Hola, " + user.nombre.split(" ")[0] + ".");
 }
+/* ---------- Contraseña del dueño (creada por él) ----------
+   Se guarda solo el hash SHA-256 con sal en este celular, nunca la
+   contraseña en claro. Sin código y sin API. */
+async function sha256Hex(texto){
+  const datos = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest("SHA-256", datos);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function leerPassDueno(){ return cargar(K.duenoPass, null); }
+function hayPassDueno(){ const p = leerPassDueno(); return !!(p && p.salt && p.hash); }
+async function verificarPassDueno(pass){
+  const p = leerPassDueno(); if (!p) return false;
+  try { return (await sha256Hex(p.salt + ":" + pass)) === p.hash; }
+  catch(e){ return false; }
+}
+async function guardarPassDueno(pass){
+  const salt = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, "0")).join("");
+  guardar(K.duenoPass, { salt, hash: await sha256Hex(salt + ":" + pass) });
+}
+/* La tarjeta grande del dueño solo se muestra con la sesión cerrada y
+   ANTES de que cree su contraseña. Con sesión activa no se muestra en
+   ningún lado; con contraseña ya creada, la sesión cerrada muestra solo
+   el acceso compacto (número + contraseña). */
+function actualizarAccesoDueno(){
+  const sesionActiva = !!yo();
+  const conPass = hayPassDueno();
+  const big = $("#owner-box");
+  const compacto = $("#acceso-dueno-compacto");
+  const crear = $("#crear-pass-dueno");
+  if (big) big.style.display = (sesionActiva || conPass) ? "none" : "";
+  if (compacto) compacto.style.display = (!sesionActiva && conPass) ? "" : "none";
+  if (crear) crear.style.display = "none";
+}
 function entrarComoDuenoPorNumero(digitos){
   if (digitos !== OWNER_DIGITS) return false;
   let dueno = users.find(u => esDueno(u));
@@ -1122,7 +1222,9 @@ function entrarComoDuenoPorNumero(digitos){
   entrar(dueno, true);
   return true;
 }
-/* Acceso del dueño: pide ÚNICAMENTE el número. */
+/* Acceso del dueño: número + contraseña creada por él. La primera vez
+   que entra con el número, crea su contraseña; después entra con
+   número + contraseña. Sin código y sin API. */
 $("#form-owner-el").addEventListener("submit", e => {
   e.preventDefault();
   const digitos = soloDigitos($("#owner-telefono").value);
@@ -1133,18 +1235,85 @@ $("#form-owner-el").addEventListener("submit", e => {
     return;
   }
   err.classList.remove("show");
-  entrarComoDuenoPorNumero(digitos);
+  if (hayPassDueno()){
+    actualizarAccesoDueno();
+    toast("Ya creaste tu contraseña. Entra con tu número y tu contraseña.");
+    return;
+  }
+  const crear = $("#crear-pass-dueno");
+  if (crear){ crear.style.display = "block"; const p1 = $("#dueno-pass1"); if (p1) p1.focus(); }
 });
-/* Inicio de sesión normal. El número del dueño entra directo,
-   sin que la contraseña lo detenga. */
-$("#form-login-el").addEventListener("submit", e => {
+$("#form-crear-pass-el").addEventListener("submit", async e => {
+  e.preventDefault();
+  /* La contraseña del dueño no se puede crear dos veces: si ya existe,
+     este flujo es inicio de sesión, no un registro nuevo. */
+  if (hayPassDueno()){
+    const crear = $("#crear-pass-dueno");
+    if (crear) crear.style.display = "none";
+    actualizarAccesoDueno();
+    toast("Ya creaste tu contraseña de dueño. Entra con tu número y tu contraseña.");
+    return;
+  }
+  const p1 = $("#dueno-pass1").value;
+  const p2 = $("#dueno-pass2").value;
+  const err = $("#crear-pass-err");
+  if (p1.length < 6){ err.textContent = "Tu contraseña debe tener al menos 6 caracteres."; err.classList.add("show"); return; }
+  if (p1 !== p2){ err.textContent = "Las contraseñas no coinciden. Escríbelas igual en los dos campos."; err.classList.add("show"); return; }
+  err.classList.remove("show");
+  try {
+    await guardarPassDueno(p1);
+  } catch(err2){
+    err.textContent = "No se pudo guardar tu contraseña en este navegador. Inténtalo en Chrome o actualiza la página.";
+    err.classList.add("show");
+    return;
+  }
+  $("#dueno-pass1").value = ""; $("#dueno-pass2").value = "";
+  entrarComoDuenoPorNumero(OWNER_DIGITS);
+});
+$("#form-owner-compacto-el").addEventListener("submit", async e => {
+  e.preventDefault();
+  const digitos = soloDigitos($("#owner-compacto-telefono").value);
+  const pass = $("#owner-compacto-pass").value;
+  const err = $("#owner-compacto-err");
+  if (digitos !== OWNER_DIGITS){
+    err.textContent = "Ese número no es el del dueño.";
+    err.classList.add("show");
+    return;
+  }
+  if (await verificarPassDueno(pass)){
+    err.classList.remove("show");
+    $("#owner-compacto-pass").value = "";
+    entrarComoDuenoPorNumero(digitos);
+  } else {
+    err.textContent = "La contraseña no coincide. Inténtalo de nuevo.";
+    err.classList.add("show");
+  }
+});
+/* Inicio de sesión normal. El número del dueño entra con su contraseña
+   creada por él: si aún no la crea, se le muestra la pantalla para
+   crearla; si ya la creó, la contraseña incorrecta se rechaza. */
+$("#form-login-el").addEventListener("submit", async e => {
   e.preventDefault();
   const tel = soloDigitos($("#li-telefono").value);
   const pass = $("#li-pass").value;
   const err = $("#login-err");
   if (tel === OWNER_DIGITS){
-    err.classList.remove("show");
-    entrarComoDuenoPorNumero(tel);
+    if (!hayPassDueno()){
+      err.classList.remove("show");
+      const crear = $("#crear-pass-dueno");
+      if (crear) crear.style.display = "block";
+      const box = $("#owner-box");
+      if (box){ box.style.display = ""; box.scrollIntoView({ behavior: "smooth", block: "start" }); }
+      toast("Crea tu contraseña de dueño para entrar.");
+      return;
+    }
+    if (await verificarPassDueno(pass)){
+      err.classList.remove("show");
+      entrarComoDuenoPorNumero(tel);
+    } else {
+      err.textContent = "La contraseña no coincide. Inténtalo de nuevo.";
+      err.classList.add("show");
+    }
     return;
   }
   const u = users.find(x => soloDigitos(x.telefono) === tel && x.rol === rolSel && x.rol !== "dueno");
@@ -1201,12 +1370,13 @@ $("#form-register-el").addEventListener("submit", e => {
   entrar(user, false);
 });
 $("#demo-cliente").addEventListener("click", () => entrar(userById("u-cliente-demo"), false));
-$("#demo-conductor").addEventListener("click", () => entrar(userById("u-cond-demo"), false));
 $("#btn-logout").addEventListener("click", () => {
   sesion = null; guardar(K.sesion, null);
   document.body.classList.add("sin-sesion");
   actualizarVisibilidadAdmin();
   $("#btn-bell").style.display = "none";
+  cercanosVistos = null;
+  actualizarAccesoDueno();
   $$(".view").forEach(v => v.classList.toggle("active", v.id === "view-auth"));
   window.scrollTo(0, 0);
   toast("Sesión cerrada. Hasta pronto.");
@@ -1234,11 +1404,7 @@ function renderCalculadora(){
     <div><span>Distancia: ${d.km} km${foraneo ? " · Foráneo" : ""}</span><span>${d.extraKm} km extra</span></div>
     <div class="total"><span>Total del viaje</span><span>${money(d.total)}</span></div>`;
   const sug = $("#pedir-sugerencia");
-  if (sug) sug.textContent = "Tarifa según la calculadora (" + (noche ? "noche" : "día") + ", " + km + " km" + (foraneo ? ", foráneo" : "") + "): " + money(d.total) + ". Puedes ofrecer ese monto o el que creas justo.";
-  const hint = $("#oferta-hint");
-  if (hint) hint.textContent = "Tarifa según la calculadora: " + money(d.total) + " (" + (noche ? "noche" : "día") + ", " + km + " km).";
-  const inp = $("#f-oferta");
-  if (inp && !inp.value) inp.placeholder = d.total;
+  if (sug) sug.textContent = "Precio fijo según tarifa (" + (noche ? "noche" : "día") + ", " + km + " km" + (foraneo ? ", foráneo" : "") + "): " + money(d.total) + ".";
 }
 function setCalcModo(m){
   calcModo = m;
@@ -1252,8 +1418,8 @@ $("#calc-dia").addEventListener("click", () => setCalcModo("dia"));
 $("#calc-noche").addEventListener("click", () => setCalcModo("noche"));
 $("#calc-km").addEventListener("input", renderCalculadora);
 $("#calc-foraneo").addEventListener("change", renderCalculadora);
-$("#f-distancia").addEventListener("input", renderCalculadora);
-$("#f-foraneo").addEventListener("change", renderCalculadora);
+$("#f-distancia").addEventListener("input", () => { renderCalculadora(); actualizarPrecioFijo(); });
+$("#f-foraneo").addEventListener("change", () => { renderCalculadora(); actualizarPrecioFijo(); });
 
 /* ============================================================
    CONDUCTORES CERCANOS
@@ -1273,20 +1439,41 @@ function textoContactoConductor(u){
   const destino = ($("#f-destino") && $("#f-destino").value.trim()) || "mi destino";
   return "Hola " + u.nombre + ", quiero pedir un viaje con Taxi Hidalguense. Salgo de " + origen + " y voy a " + destino + ". ¿Me puedes llevar?";
 }
+let cercanosVistos = null;
 function renderCercanos(){
   const box = $("#lista-cercanos");
   if (!box) return;
   const lista = conductoresCercanos();
   if (!lista.length){
-    box.innerHTML = `<div class="card"><p class="empty-note">No hay conductores disponibles cerca por ahora.</p></div>`;
+    box.innerHTML = `<div class="card"><p class="empty-note">Aún no hay conductores disponibles cerca. Regístrate como conductor para aparecer aquí.</p></div>`;
     return;
+  }
+  /* Aviso de conductor cercano nuevo: la primera lista solo se registra,
+     sin avisar; solo los conductores que aparecen después generan
+     notificación en el centro y en el navegador (si hay permiso). */
+  const idsAhora = lista.map(item => item.u.id);
+  if (cercanosVistos === null){
+    cercanosVistos = new Set(idsAhora);
+  } else {
+    const me = yo();
+    lista.forEach(item => {
+      if (!cercanosVistos.has(item.u.id)){
+        cercanosVistos.add(item.u.id);
+        if (me && me.rol === "cliente"){
+          notificar(me.id, "Conductor cercano nuevo", item.u.nombre + " está cerca de ti, a " + item.km.toFixed(1) + " km. Puedes escribirle por WhatsApp o pedir tu viaje.", null, false);
+        }
+      }
+    });
   }
   box.innerHTML = lista.map((item, i) => {
     const u = item.u;
     const c = califDe(u.id);
     const resenas = resenasDeConductor(u.id);
     const tel = soloDigitos(u.telefono);
-    const wa = "https://wa.me/52" + tel + "?text=" + encodeURIComponent(textoContactoConductor(u));
+    /* El botón de WhatsApp solo existe para conductores reales registrados
+       con su número real (10 dígitos). Nunca se arma un enlace con
+       números inventados. */
+    const wa = tel.length >= 10 ? "https://wa.me/52" + tel + "?text=" + encodeURIComponent(textoContactoConductor(u)) : "";
     return `
     <div class="card">
       <div class="drv">
@@ -1299,7 +1486,7 @@ function renderCercanos(){
         <span class="plate">${esc(u.placa)}</span>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-        <a class="mini-btn primary" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>
+        ${wa ? `<a class="mini-btn primary" href="${wa}" target="_blank" rel="noopener">Contactar por WhatsApp</a>` : ""}
         <button class="mini-btn" type="button" data-resenas="${u.id}">Ver reseñas (${resenas.length})</button>
         <button class="mini-btn" type="button" data-go="pedir">Pedir viaje</button>
       </div>
@@ -1321,7 +1508,7 @@ function usarUbicacionActual(lat, lng, texto){
 }
 $("#btn-ubicacion").addEventListener("click", () => {
   if (!("geolocation" in navigator)){
-    $("#loc-estado").textContent = "Tu aparato no ofrece ubicación automática. Usa los campos a mano.";
+    $("#loc-estado").textContent = "Tu aparato no tiene ubicación automática. Usa los campos a mano.";
     toast("Ubicación automática no disponible. Usa los campos a mano.");
     return;
   }
@@ -1341,21 +1528,6 @@ $("#btn-ubicacion-manual").addEventListener("click", () => {
   usarUbicacionActual(lat, lng, "Ubicación manual en uso. Las distancias se calculan desde aquí.");
   toast("Ubicación actualizada.");
 });
-/* Simulación: las posiciones se mueven un poco cada 10 s. */
-setInterval(() => {
-  let cambio = false;
-  users.forEach(u => {
-    if (u.rol === "conductor" && typeof u.lat === "number"){
-      u.lat += (Math.random() - 0.5) * 0.002;
-      u.lng += (Math.random() - 0.5) * 0.002;
-      cambio = true;
-    }
-  });
-  if (cambio){
-    guardar(K.users, users);
-    if (yo() && $("#view-inicio").classList.contains("active")) renderCercanos();
-  }
-}, 10000);
 
 /* ============================================================
    INICIO
@@ -1384,26 +1556,30 @@ function renderInicio(){
   const total = completados.reduce((s, t) => s + (t.precioFinal || 0), 0);
   const activos = trips.filter(t =>
     (me.rol === "cliente" ? t.clienteId === me.id : (t.conductorId === me.id || t.estado === "buscando")) &&
-    ["buscando", "contraoferta", "aceptado", "en_curso"].includes(t.estado)).length;
+    ["buscando", "aceptado", "en_curso"].includes(t.estado)).length;
   $("#hello-rol").textContent = me.rol === "conductor" ? "Conductor" : "Cliente";
   $("#hello-rol").className = "rol-badge" + (me.rol === "conductor" ? " cond" : "");
   $("#hello-titulo").innerHTML = "Hola, <span class='y'>" + esc(me.nombre.split(" ")[0]) + "</span>.";
   $("#hello-sub").textContent = me.rol === "conductor"
     ? (disponible ? "Estás disponible: las solicitudes de clientes te llegan a la pestaña Pedir." : "Estás marcado como no disponible. Actívate en la pestaña Pedir para recibir solicitudes.")
-    : "Pide tu viaje, ofrece tu precio o deja que el conductor ponga el suyo.";
+    : "Pide tu viaje con precio fijo según la tarifa.";
   $("#hello-stats").innerHTML = `
     <div><b>${completados.length}</b><span>Viajes completados</span></div>
     <div><b>${c.prom ? c.prom.toFixed(1) + " ★" : "—"}</b><span>Tu calificación</span></div>
-    <div><b>${activos}</b><span>En curso / negociación</span></div>`;
+    <div><b>${activos}</b><span>En curso</span></div>`;
   $("#quick-pedir-txt").textContent = me.rol === "conductor" ? "Solicitudes" : "Pedir taxi";
   $("#tab-pedir-txt").textContent = me.rol === "conductor" ? "Solicitudes" : "Pedir";
   const home = $("#home-dinamico");
   if (me.rol === "cliente"){
     const conductores = users.filter(u => u.rol === "conductor");
-    home.innerHTML = `
+    home.innerHTML = conductores.length
+      ? `
       <div class="sec-head"><h2>Conductores de la plataforma</h2></div>
       ${conductores.map(tarjetaConductorResumen).join("")}
-      <p class="hint">Al confirmar un viaje verás aquí mismo y en tu viaje los datos completos del conductor y de su carro: nombre, placa, color y modelo.</p>`;
+      <p class="hint">Al confirmar un viaje verás aquí mismo y en tu viaje los datos completos del conductor y de su carro: nombre, placa, color y modelo.</p>`
+      : `
+      <div class="sec-head"><h2>Conductores de la plataforma</h2></div>
+      <div class="card"><p class="empty-note">Aún no hay conductores disponibles cerca. Regístrate como conductor para aparecer aquí.</p></div>`;
   } else {
     const abiertas = trips.filter(t => t.estado === "buscando").length;
     home.innerHTML = `
@@ -1441,33 +1617,26 @@ function renderAdminResumen(){
 /* ============================================================
    PEDIR / TABLERO
    ============================================================ */
-let pasajeros = 1, modoPrecio = "ofrece";
+let pasajeros = 1;
 function renderPedir(){
   const me = yo(); if (!me) return;
   if (me.rol === "dueno"){ irA("admin"); return; }
   $("#pedir-cliente").style.display = me.rol === "cliente" ? "block" : "none";
   $("#pedir-conductor").style.display = me.rol === "conductor" ? "block" : "none";
-  if (me.rol === "cliente"){ renderCalculadora(); actualizarOfertaHint(); }
+  if (me.rol === "cliente"){ renderCalculadora(); actualizarPrecioFijo(); }
   else { $("#sw-disponible").checked = disponible; renderTablero(); }
 }
-function actualizarOfertaHint(){
+/* Precio fijo según la tarifa, calculado antes de pedir el viaje. */
+function actualizarPrecioFijo(){
   const km = Number($("#f-distancia").value) || 0;
-  const noche = esNocheAhora();
-  $("#oferta-hint").textContent = "Tarifa según la calculadora: " + money(calcFare(km, noche)) + " (" + (noche ? "noche" : "día") + ", " + km + " km, sedán).";
-  const inp = $("#f-oferta");
-  if (inp && !inp.value) inp.placeholder = calcFare(km, noche);
+  const noche = calcEsNoche();
+  const foraneo = $("#f-foraneo").checked;
+  const d = detalleTarifa(km, noche);
+  const txt = $("#precio-fijo-txt");
+  if (txt) txt.textContent = "Precio fijo según tarifa: " + money(d.total);
+  const det = $("#precio-fijo-detalle");
+  if (det) det.textContent = "Base hasta " + KM_BASE + " km · " + (noche ? "noche" : "día") + (foraneo ? " · Foráneo" : "") + " · " + km + " km · Sedán";
 }
-function setModoPrecio(m){
-  modoPrecio = m;
-  $("#modo-ofrezco").classList.toggle("on", m === "ofrece");
-  $("#modo-propone").classList.toggle("on", m === "propone");
-  $("#campo-oferta").style.display = m === "ofrece" ? "block" : "none";
-  $("#modo-hint").textContent = m === "ofrece"
-    ? "Tú propones cuánto pagar. Los conductores pueden aceptarlo, rechazarlo o contraofertar."
-    : "Los conductores que vean tu solicitud pondrán su precio y tú decides si lo aceptas o lo rechazas.";
-}
-$("#modo-ofrezco").addEventListener("click", () => setModoPrecio("ofrece"));
-$("#modo-propone").addEventListener("click", () => setModoPrecio("propone"));
 $("#pas-menos").addEventListener("click", () => { if (pasajeros > 1){ pasajeros--; $("#pas-num").textContent = pasajeros; } });
 $("#pas-mas").addEventListener("click", () => { if (pasajeros < 4){ pasajeros++; $("#pas-num").textContent = pasajeros; } });
 $("#form-viaje-el").addEventListener("submit", e => {
@@ -1479,25 +1648,22 @@ $("#form-viaje-el").addEventListener("submit", e => {
   const faltan = [];
   if (!origen) faltan.push("la dirección exacta de origen");
   if (!destino) faltan.push("la dirección exacta de destino");
-  let oferta = null;
-  if (modoPrecio === "ofrece"){
-    oferta = Number($("#f-oferta").value);
-    if (!oferta || oferta < 20) faltan.push("una oferta válida (mínimo $20)");
-  }
   if (faltan.length){ err.textContent = "Para publicar tu solicitud falta: " + faltan.join(", ") + "."; err.classList.add("show"); return; }
   err.classList.remove("show");
+  const kmViaje = Number($("#f-distancia").value) || 0;
+  const precioFijo = calcFare(kmViaje, calcEsNoche());
   const t = {
     id: Date.now(), clienteId: me.id, conductorId: null,
-    origen, destino, distanciaKm: Number($("#f-distancia").value) || 0, foraneo: $("#f-foraneo").checked,
+    origen, destino, distanciaKm: kmViaje, foraneo: $("#f-foraneo").checked,
     vehiculo: "sedan", pasajeros,
-    modo: modoPrecio, precioOferta: oferta, precioPropuesta: null, ultimoProponente: null, precioFinal: null,
+    precioFinal: precioFijo,
     estado: "buscando", notas: $("#f-notas").value.trim(), fecha: Date.now(),
     califConductor: null, califCliente: null
   };
   trips.unshift(t);
   guardar(K.trips, trips);
   users.filter(u => u.rol === "conductor" && conductorVisible(u)).forEach(d =>
-    notificar(d.id, "Nueva solicitud de viaje", me.nombre + " pide un viaje de " + origen + " a " + destino + (oferta ? ", ofrece " + money(oferta) + "." : ", espera tu precio."), t.id, true));
+    notificar(d.id, "Nueva solicitud de viaje", me.nombre + " pide un viaje de " + origen + " a " + destino + ", precio fijo " + money(precioFijo) + " según la tarifa.", t.id, true));
   guardar(K.notifs, notifs);
   toast("Solicitud publicada. Los conductores ya la pueden ver.");
   irA("viajes");
@@ -1511,9 +1677,7 @@ $("#sw-disponible").addEventListener("change", e => {
 });
 function renderTablero(){
   const me = yo(); if (!me) return;
-  const lista = trips.filter(t =>
-    t.estado === "buscando" ||
-    (t.estado === "contraoferta" && t.conductorId === me.id && t.ultimoProponente === "cliente"));
+  const lista = trips.filter(t => t.estado === "buscando");
   const box = $("#tablero-solicitudes");
   if (!disponible){
     box.innerHTML = `<div class="card"><p class="empty-note">Estás <b>no disponible</b>.<br>Activa el interruptor de arriba para ver y tomar solicitudes.</p></div>`;
@@ -1527,27 +1691,20 @@ function renderTablero(){
 }
 
 /* ============================================================
-   VIAJES · tarjetas, negociación con botones grandes
+   VIAJES · tarjetas con precio fijo y botones grandes
    ACEPTAR confirma el viaje. RECHAZAR cancela el viaje.
-   Ambos avisan al otro lado. La contraoferta existe en
-   ambos sentidos, sin quitar los botones grandes.
+   Ambos avisan al otro lado. El precio es fijo según la
+   tarifa y se muestra calculado antes de pedir el viaje.
    ============================================================ */
 const ESTADOS = {
   buscando: { txt: "Buscando conductor", cls: "st-buscando" },
-  contraoferta: { txt: "Precio en negociación", cls: "st-contra" },
   aceptado: { txt: "Viaje confirmado", cls: "st-aceptado" },
   en_curso: { txt: "Viaje en curso", cls: "st-curso" },
   completado: { txt: "Completado", cls: "st-fin" },
   cancelado: { txt: "Cancelado", cls: "st-cancel" }
 };
 function bloquePrecio(t){
-  if (t.estado === "aceptado" || t.estado === "en_curso" || t.estado === "completado")
-    return `<div class="trip-price"><div><div class="lbl">Precio acordado</div><div style="font-size:12px;color:#cfccc0;">Pagos al abordar, en efectivo o transferencia</div></div><div class="amt">${money(t.precioFinal)}</div></div>`;
-  if (t.estado === "contraoferta")
-    return `<div class="trip-price"><div><div class="lbl">${t.ultimoProponente === "conductor" ? "El conductor propone" : "El cliente propone"}</div><div class="det" style="text-align:left;">${t.precioOferta ? "Oferta inicial: " + money(t.precioOferta) : "El cliente pidió que el conductor pusiera el precio"}</div></div><div class="amt">${money(t.precioPropuesta)}</div></div>`;
-  if (t.modo === "ofrece")
-    return `<div class="trip-price"><div><div class="lbl">Tu oferta</div><div class="det" style="text-align:left;">Esperando respuesta de conductores</div></div><div class="amt">${money(t.precioOferta)}</div></div>`;
-  return `<div class="trip-price"><div><div class="lbl">Precio</div><div style="font-size:12px;color:#cfccc0;">El conductor pondrá su precio</div></div><div class="amt">Por acordar</div></div>`;
+  return `<div class="trip-price"><div><div class="lbl">Precio fijo según tarifa</div><div style="font-size:12px;color:#cfccc0;">${t.estado === "buscando" ? "Esperando a que un conductor acepte el viaje" : "Pagos al abordar, en efectivo o transferencia"}</div></div><div class="amt">${money(t.precioFinal)}</div></div>`;
 }
 function bloqueContraparte(t){
   const me = yo(); if (!me) return "";
@@ -1570,13 +1727,6 @@ function botonesDecision(t, etiquetaAceptar){
     </div>
     <p class="decision-note">Aceptar confirma el viaje. Rechazar lo cancela y avisa al otro lado.</p>`;
 }
-function filaContraoferta(t, placeholder, etiquetaBoton){
-  return `
-    <div class="counter-row">
-      <input class="in" type="number" inputmode="numeric" min="20" step="5" placeholder="${placeholder}" id="contra-${t.id}" />
-      <button class="mini-btn primary" type="button" data-contraofertar="${t.id}">${etiquetaBoton}</button>
-    </div>`;
-}
 function tarjetaViaje(t, opts){
   opts = opts || {};
   const me = yo(); if (!me) return "";
@@ -1584,33 +1734,16 @@ function tarjetaViaje(t, opts){
   const soyParte = esCliente ? t.clienteId === me.id : (t.conductorId === me.id || opts.tablero);
   const est = ESTADOS[t.estado];
   let acciones = "";
-  /* CONDUCTOR: solicitud nueva. */
+  /* CONDUCTOR: solicitud nueva en el tablero. Solo ACEPTAR o RECHAZAR:
+     el precio es fijo según la tarifa, no se cambia. */
   if (t.estado === "buscando" && !esCliente && opts.tablero){
-    if (t.modo === "ofrece"){
-      acciones = botonesDecision(t, money(t.precioOferta)) + filaContraoferta(t, "O propón otro precio $", "Contraofertar");
-    } else {
-      acciones = `<p class="hint" style="margin-top:10px;">El cliente pidió que el conductor ponga el precio. Escribe tu precio y pulsa ACEPTAR para enviarlo, o RECHAZAR para cancelar la solicitud.</p>`
-        + `<div class="counter-row"><input class="in" type="number" inputmode="numeric" min="20" step="5" placeholder="Pon tu precio $" id="contra-${t.id}" /></div>`
-        + botonesDecision(t, "");
-    }
+    acciones = `<p class="hint" style="margin-top:10px;">Precio fijo según tarifa: <b>${money(t.precioFinal)}</b>. Acepta para tomar el viaje o rechaza para cancelar la solicitud.</p>`
+      + botonesDecision(t, money(t.precioFinal));
   }
-  /* CONDUCTOR: el cliente contraofertó. */
-  if (t.estado === "contraoferta" && !esCliente && t.conductorId === me.id && t.ultimoProponente === "cliente"){
-    acciones = `<p class="hint" style="margin-top:10px;">El cliente propone <b>${money(t.precioPropuesta)}</b>. Acepta para confirmar, rechaza para cancelar, o propón otro precio.</p>`
-      + botonesDecision(t, money(t.precioPropuesta)) + filaContraoferta(t, "O propón otro precio $", "Contraofertar");
-  }
-  /* CLIENTE: el conductor contraofertó o puso su precio. */
-  if (t.estado === "contraoferta" && esCliente && t.ultimoProponente === "conductor"){
-    acciones = `<p class="hint" style="margin-top:10px;">El conductor propone <b>${money(t.precioPropuesta)}</b>. Acepta para confirmar, rechaza para cancelar, o propón otro precio.</p>`
-      + botonesDecision(t, money(t.precioPropuesta)) + filaContraoferta(t, "O propón otro precio $", "Contraofertar");
-  }
-  /* Espera: el cliente ya contraofertó y falta el conductor. */
-  if (t.estado === "contraoferta" && esCliente && t.ultimoProponente === "cliente"){
-    acciones = `<p class="hint" style="margin-top:10px;">Propusiste ${money(t.precioPropuesta)}. Esperando la respuesta del conductor…</p>
-      <div class="trip-actions"><button class="mini-btn danger" type="button" data-cancelar="${t.id}">Cancelar viaje</button></div>`;
-  }
-  if (t.estado === "contraoferta" && !esCliente && t.conductorId === me.id && t.ultimoProponente === "conductor"){
-    acciones = `<p class="hint" style="margin-top:10px;">Propusiste ${money(t.precioPropuesta)}. Esperando la respuesta del cliente…</p>`;
+  /* CLIENTE: su solicitud sigue buscando conductor. */
+  if (t.estado === "buscando" && esCliente && t.clienteId === me.id){
+    acciones = `<p class="hint" style="margin-top:10px;">Tu solicitud está visible para los conductores. Te avisamos aquí mismo cuando un conductor la acepte.</p>
+      <div class="trip-actions"><button class="mini-btn danger" type="button" data-cancelar="${t.id}">Cancelar solicitud</button></div>`;
   }
   if ((t.estado === "aceptado" || t.estado === "en_curso") && soyParte){
     acciones = `<div class="trip-actions">
@@ -1674,32 +1807,13 @@ document.addEventListener("click", e => {
   if (acc){
     const me = yo(); if (!me) return;
     const t = trips.find(x => x.id === Number(acc.dataset.aceptar)); if (!t) return;
-    if (me.rol === "conductor"){
-      if (t.estado === "buscando" && t.modo === "propone"){
-        const inp = $("#contra-" + t.id);
-        const precio = Number(inp && inp.value);
-        if (!precio || precio < 20){ toast("Escribe tu precio para aceptar y enviarlo al cliente."); if (inp) inp.focus(); return; }
-        t.conductorId = me.id; t.precioPropuesta = precio; t.ultimoProponente = "conductor"; t.estado = "contraoferta";
-        notificar(t.clienteId, "Un conductor puso su precio", me.nombre + " propone " + money(precio) + " para tu viaje. Acepta o rechaza en Mis viajes.", t.id, true);
-        guardarTodo(); actualizarBadges(); toast("Precio enviado al cliente: " + money(precio) + ".");
-        renderTablero(); return;
-      }
-      const precio = t.estado === "contraoferta" ? t.precioPropuesta : t.precioOferta;
-      confirmarViaje(t, precio, me.id);
-      agregarMsgSistema(t.id, "Viaje confirmado por " + money(precio) + ". Ya pueden escribirse por este chat.");
-      notificar(t.clienteId, "¡Tu viaje fue confirmado!", me.nombre + " aceptó el viaje por " + money(precio) + ". Auto: " + me.modelo + ", color " + me.color + ", placas " + me.placa + ".", t.id, true);
-      guardarTodo(); actualizarBadges(); toast("Viaje confirmado por " + money(precio) + ".");
-      if ($("#view-pedir").classList.contains("active")) renderPedir();
-      if ($("#view-viajes").classList.contains("active")) renderViajes();
-      return;
-    }
-    if (me.rol === "cliente" && t.estado === "contraoferta" && t.ultimoProponente === "conductor"){
-      confirmarViaje(t, t.precioPropuesta, t.conductorId);
-      agregarMsgSistema(t.id, "El cliente aceptó el precio de " + money(t.precioFinal) + ". Ya pueden escribirse por este chat.");
-      avisarContraparte(t, "El cliente aceptó tu precio", "El viaje quedó confirmado en " + money(t.precioFinal) + ".");
-      guardarTodo(); actualizarBadges(); toast("Precio aceptado. ¡Viaje confirmado por " + money(t.precioFinal) + "!");
-      renderViajes(); return;
-    }
+    if (me.rol !== "conductor" || t.estado !== "buscando") return;
+    confirmarViaje(t, t.precioFinal, me.id);
+    agregarMsgSistema(t.id, "Viaje confirmado por " + money(t.precioFinal) + ". Ya pueden escribirse por este chat.");
+    notificar(t.clienteId, "¡Tu viaje fue confirmado!", me.nombre + " aceptó el viaje por " + money(t.precioFinal) + " (precio fijo según la tarifa). Auto: " + me.modelo + ", color " + me.color + ", placas " + me.placa + ".", t.id, true);
+    guardarTodo(); actualizarBadges(); toast("Viaje confirmado por " + money(t.precioFinal) + ".");
+    if ($("#view-pedir").classList.contains("active")) renderPedir();
+    if ($("#view-viajes").classList.contains("active")) renderViajes();
     return;
   }
   const rej = e.target.closest("[data-rechazar]");
@@ -1712,24 +1826,6 @@ document.addEventListener("click", e => {
     cancelarViaje(t, quien);
     if (otroId) notificar(otroId, "Viaje cancelado", (me.rol === "conductor" ? "El conductor " + me.nombre : "El cliente " + me.nombre) + " rechazó el viaje de " + t.origen + " a " + t.destino + ". El viaje quedó cancelado.", t.id, true);
     guardarTodo(); actualizarBadges(); toast("Viaje cancelado y el otro lado fue avisado.");
-    if ($("#view-pedir").classList.contains("active")) renderPedir();
-    if ($("#view-viajes").classList.contains("active")) renderViajes();
-    return;
-  }
-  const co = e.target.closest("[data-contraofertar]");
-  if (co){
-    const me = yo(); if (!me) return;
-    const t = trips.find(x => x.id === Number(co.dataset.contraofertar)); if (!t) return;
-    const inp = $("#contra-" + t.id);
-    const precio = Number(inp && inp.value);
-    if (!precio || precio < 20){ toast("Escribe un precio válido (mínimo $20)."); return; }
-    const proponente = me.rol === "conductor" ? "conductor" : "cliente";
-    t.precioPropuesta = precio; t.ultimoProponente = proponente; t.estado = "contraoferta";
-    if (me.rol === "conductor") t.conductorId = me.id;
-    const otroId = me.rol === "conductor" ? t.clienteId : t.conductorId;
-    if (otroId) notificar(otroId, me.rol === "conductor" ? "Un conductor contraofertó" : "El cliente contraofertó",
-      me.nombre + " propone " + money(precio) + " para el viaje de " + t.origen + " a " + t.destino + ". Acepta o rechaza en Mis viajes.", t.id, true);
-    guardarTodo(); actualizarBadges(); toast("Propusiste " + money(precio) + ". Esperando respuesta.");
     if ($("#view-pedir").classList.contains("active")) renderPedir();
     if ($("#view-viajes").classList.contains("active")) renderViajes();
     return;
@@ -1790,16 +1886,16 @@ document.addEventListener("click", e => {
 function renderViajes(){
   const me = yo(); if (!me) return;
   const mios = trips.filter(t => me.rol === "cliente" ? t.clienteId === me.id : (t.conductorId === me.id));
-  const activos = mios.filter(t => ["buscando", "contraoferta", "aceptado", "en_curso"].includes(t.estado));
+  const activos = mios.filter(t => ["buscando", "aceptado", "en_curso"].includes(t.estado));
   const hist = mios.filter(t => ["completado", "cancelado"].includes(t.estado));
   $("#lista-activos").innerHTML = activos.length
     ? activos.map(t => tarjetaViaje(t)).join("")
     : `<div class="card"><p class="empty-note">${me.rol === "cliente"
-        ? "No tienes viajes en curso.<br><b>Pide tu taxi</b> desde la pestaña Pedir y negocia el precio aquí."
+        ? "No tienes viajes en curso.<br><b>Pide tu taxi</b> desde la pestaña Pedir con precio fijo según la tarifa."
         : "No tienes viajes en curso.<br>Revisa las <b>solicitudes abiertas</b> en la pestaña Solicitudes."}</p></div>`;
   $("#lista-historial").innerHTML = hist.length
     ? hist.map(t => tarjetaViaje(t)).join("")
-    : `<div class="card"><p class="empty-note">Tu historial aparecerá aquí con el precio acordado y las calificaciones de cada viaje.</p></div>`;
+    : `<div class="card"><p class="empty-note">Tu historial aparecerá aquí con el precio fijo y las calificaciones de cada viaje.</p></div>`;
   actualizarBadges();
 }
 
@@ -1819,6 +1915,15 @@ function iconoNotif(titulo){
   if (t.includes("precio") || t.includes("contraofert") || t.includes("acept") || t.includes("confirm")) return ICONOS_NOTIF.precio;
   return ICONOS_NOTIF.defecto;
 }
+/* Al abrir el centro de notificaciones el contador se limpia: todo lo
+   del usuario queda marcado como leído. */
+function marcarNotifsLeidas(){
+  const me = yo(); if (!me) return;
+  let cambio = false;
+  notifs.forEach(n => { if (n.userId === me.id && !n.leida){ n.leida = true; cambio = true; } });
+  if (cambio) guardar(K.notifs, notifs);
+  actualizarBadges();
+}
 function renderAvisos(){
   const lista = misNotifs();
   $("#lista-notifs").innerHTML = lista.length
@@ -1833,7 +1938,7 @@ function renderAvisos(){
         </div>
         ${n.leida ? "" : '<span class="dot"></span>'}
       </div>`).join("")
-    : `<p class="empty-note">No tienes notificaciones todavía.<br>Aquí te avisaremos de solicitudes, ofertas, mensajes y calificaciones.</p>`;
+    : `<p class="empty-note">No tienes notificaciones todavía.<br>Aquí te avisaremos de solicitudes, viajes, mensajes y calificaciones.</p>`;
   $$("#lista-notifs [data-ir-viaje]").forEach(b => b.addEventListener("click", () => irA("viajes")));
 }
 $("#btn-leer-todo").addEventListener("click", () => {
@@ -1899,21 +2004,6 @@ $("#chat-form").addEventListener("submit", e => {
   const otra = contraparteDe(t);
   if (otra) notificar(otra.id, "Nuevo mensaje en tu viaje", me.nombre + ": “" + (texto.length > 60 ? texto.slice(0, 60) + "…”" : texto) + "”", chatTripId, true);
   guardar(K.notifs, notifs);
-  if (otra && (otra.id.indexOf("u-cond-") === 0 || otra.id.indexOf("u-cli-") === 0)){
-    const respuestas = otra.rol === "conductor"
-      ? ["Perfecto, ya voy en camino.", "Estoy a unos minutos. Te aviso al llegar.", "De acuerdo, te espero en el punto acordado."]
-      : ["Perfecto, ya salgo.", "Estoy en la dirección indicada.", "Gracias, te veo en un momento."];
-    setTimeout(() => {
-      if (chatTripId == null || !trips.find(x => x.id === chatTripId)) return;
-      if (!msgs[chatTripId]) msgs[chatTripId] = [];
-      msgs[chatTripId].push({ de: otra.id, texto: respuestas[Math.floor(Math.random() * respuestas.length)], ts: Date.now() });
-      guardar(K.msgs, msgs);
-      notificar(me.id, "Nuevo mensaje en tu viaje", otra.nombre + " respondió en el chat del viaje.", chatTripId, true);
-      guardar(K.notifs, notifs);
-      if (chatTripId != null) renderChat();
-      actualizarBadges();
-    }, 2200);
-  }
 });
 
 /* ============================================================
@@ -2003,10 +2093,10 @@ $("#btn-borrar-datos").addEventListener("click", () => {
 });
 
 /* ============================================================
-   PANEL DEL DUEÑO — verificado por número en cada acceso
+   PANEL DEL DUEÑO — verificado por número y contraseña en cada acceso
    ============================================================ */
 function renderAdmin(){
-  /* Verificación por número en cada render, no solo al ocultar el botón. */
+  /* Verificación por número y contraseña en cada render, no solo al ocultar el botón. */
   if (!puedeVerAdmin()){
     toast("El panel de administración es solo para el dueño.");
     irA("inicio");
@@ -2122,17 +2212,6 @@ function renderAdmin(){
    ============================================================ */
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; });
-$$("[data-instalar]").forEach(btn => btn.addEventListener("click", async () => {
-  if (deferredPrompt){
-    deferredPrompt.prompt();
-    try { await deferredPrompt.userChoice; } catch(e){}
-    deferredPrompt = null;
-    toast("Si aceptaste, la app ya se está instalando en tu pantalla de inicio.");
-  } else {
-    ["#install-steps-auth", "#install-steps-home"].forEach(sel => { const el = $(sel); if (el) el.style.display = "block"; });
-    toast("Sigue los pasos para agregar la app a tu pantalla de inicio.");
-  }
-}));
 function esVistaAPK(){
   const ua = navigator.userAgent || "";
   const enWebView = /TaxiHidalguense/i.test(ua) || (/Android/i.test(ua) && /wv/i.test(ua));
@@ -2146,7 +2225,6 @@ function esVistaAPK(){
 (function init(){
   window.calcFare = calcFare;
   setRol("cliente");
-  setModoPrecio("ofrece");
   renderCalculadora();
   if (esVistaAPK()){
     $$("[data-bloque-descarga]").forEach(el => { el.style.display = "none"; });
@@ -2154,6 +2232,7 @@ function esVistaAPK(){
     if (nota) nota.style.display = "flex";
   }
   actualizarVisibilidadAdmin();
+  actualizarAccesoDueno();
   const me = yo();
   if (me){
     document.body.classList.remove("sin-sesion");
