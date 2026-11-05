@@ -1010,6 +1010,29 @@ function notificar(userId, titulo, texto, tripId, esViaje){
   }
 }
 function misNotifs(){ const me = yo(); return me ? notifs.filter(n => n.userId === me.id) : []; }
+/* Espejo remoto de un aviso (tabla notifications de Supabase) para que el
+   servicio de avisos con la app cerrada pueda entregarlo. Solo se usa en
+   los eventos donde la capa Supabase NO crea ya la fila (aceptar, cancelar,
+   mensajes, castigos y la solicitud nueva ya la crean en supabase-client.js:
+   si se espejara todo, el destinatario recibiría cada aviso duplicado).
+   Nunca rompe la app si falla: el aviso local ya quedó guardado. */
+function notificarRemoto(telefono, tipo, texto, tripId){
+  try { if (window.TaxiSync && TaxiSync.notificarRemoto) TaxiSync.notificarRemoto({ telefono, tipo, texto, tripId: tripId || null }); } catch(e){}
+}
+/* Aviso de solicitudes abiertas al entrar: un conductor que se registra o
+   inicia sesión DESPUÉS de publicada una solicitud no recibió el aviso del
+   momento de la publicación (ese aviso solo llega a los conductores que ya
+   existían en ese momento, en local y en Supabase). Al entrar se le avisa
+   de cada solicitud que sigue abierta, una sola vez por viaje: si el aviso
+   remoto ya llegó, no se duplica. */
+function avisarSolicitudesAbiertas(){
+  const me = yo(); if (!me || me.rol !== "conductor" || !conductorVisible(me)) return;
+  trips.filter(t => t.estado === "buscando").forEach(t => {
+    if (notifs.some(n => n.userId === me.id && n.tripId === t.id && n.titulo === "Nueva solicitud de viaje")) return;
+    const cl = userById(t.clienteId);
+    notificar(me.id, "Nueva solicitud de viaje", (cl ? cl.nombre : "Un cliente") + " pide un viaje de " + t.origen + " a " + t.destino + ", precio fijo " + money(t.precioFinal) + " según la tarifa.", t.id, true);
+  });
+}
 function noLeidas(){ return misNotifs().filter(n => !n.leida).length; }
 function actualizarBadges(){
   const n = noLeidas();
@@ -1131,8 +1154,10 @@ $("#pf-foto").addEventListener("change", e => {
   });
 });
 
-function entrar(user, esDuenoDirecto){
+function entrar(user, esDuenoDirecto, esRegistro){
   sesion = { userId: user.id };
+  /* Avisos con la app cerrada: pasa el teléfono al servicio nativo. */
+  try { if (window.TaxiAvisos) window.TaxiAvisos.setUserId(String(user.telefono || "")); } catch(e){}
   /* V7: la sesión NO se guarda en localStorage (solo en memoria). */
   document.body.classList.remove("sin-sesion");
   actualizarVisibilidadAdmin();
@@ -1140,16 +1165,32 @@ function entrar(user, esDuenoDirecto){
   pedirPermisoNotificaciones();
   cercanosVistos = null;
   actualizarAccesoDueno();
-  if (window.TaxiSync && TaxiSync.afterLogin) TaxiSync.afterLogin(user);
+  /* Al entrar se avisan las solicitudes que siguen abiertas (ver
+     avisarSolicitudesAbiertas): se espera a que termine la bajada de
+     datos para no avisar antes de ver los viajes. Sin puente, los viajes
+     ya están en este celular y se avisa de inmediato. */
+  if (window.TaxiSync && TaxiSync.afterLogin){
+    try {
+      const p = TaxiSync.afterLogin(user);
+      if (p && typeof p.then === "function") p.then(() => avisarSolicitudesAbiertas()).catch(() => avisarSolicitudesAbiertas());
+      else avisarSolicitudesAbiertas();
+    } catch(e){ avisarSolicitudesAbiertas(); }
+  } else {
+    avisarSolicitudesAbiertas();
+  }
   if (esDuenoDirecto || esDueno(user)){
     irA("admin");
     toast("Bienvenido, Dueño. Panel de administración abierto.");
     return;
   }
-  notificar(user.id, "Bienvenido a " + NEGOCIO, user.rol === "conductor"
-    ? "Tu cuenta de conductor está activa. Revisa las solicitudes de clientes en la pestaña Pedir."
-    : "Tu cuenta está activa. Pide tu primer viaje desde la pestaña Pedir.", null, false);
-  guardar(K.notifs, notifs);
+  /* El aviso de bienvenida es solo del primer registro: antes se creaba
+     en cada inicio de sesión y se duplicaba. */
+  if (esRegistro && !notifs.some(n => n.userId === user.id && n.titulo === "Bienvenido a " + NEGOCIO)){
+    notificar(user.id, "Bienvenido a " + NEGOCIO, user.rol === "conductor"
+      ? "Tu cuenta de conductor está activa. Revisa las solicitudes de clientes en la pestaña Pedir."
+      : "Tu cuenta está activa. Pide tu primer viaje desde la pestaña Pedir.", null, false);
+    guardar(K.notifs, notifs);
+  }
   actualizarBadges();
   irA("inicio");
   toast("Sesión iniciada. Hola, " + user.nombre.split(" ")[0] + ".");
@@ -1421,7 +1462,7 @@ function entrarComoDuenoPorNumero(digitos){
         if (drv) u = await espejoUsuarioLocal({ telefono: ses.telefono, nombre: ses.nombre, rol: "conductor", pass, driver: drv });
       }
       err.classList.remove("show");
-      entrar(u, false);
+      entrar(u, false, false);
       return;
     } catch (e2){
       err.textContent = (e2 && e2.message) ? e2.message : "No se pudo iniciar sesión en línea. Revisa tu número y contraseña.";
@@ -1433,7 +1474,7 @@ function entrarComoDuenoPorNumero(digitos){
   if (!u){ err.textContent = "No encontramos una cuenta de " + (rolSel === "conductor" ? "conductor" : "cliente") + " con ese teléfono. Regístrate o revisa el tipo de cuenta elegido."; err.classList.add("show"); return; }
   if (!(await verificarPassLocal(u, pass))){ err.textContent = "La contraseña no coincide. Inténtalo de nuevo."; err.classList.add("show"); return; }
   err.classList.remove("show");
-  entrar(u, false);
+  entrar(u, false, false);
 });
   $("#form-register-el").addEventListener("submit", async e => {
   e.preventDefault();
@@ -1488,7 +1529,7 @@ function entrarComoDuenoPorNumero(digitos){
       }
       const u = await espejoUsuarioLocal({ telefono: ses.telefono, nombre: ses.nombre, rol: ses.rol, pass, driver: ses.driver || null });
       fotoConductorDataURL = null;
-      entrar(u, false);
+      entrar(u, false, true);
       return;
     } catch (e2){
       err.textContent = (e2 && e2.message) ? e2.message : "No se pudo crear la cuenta en línea. Inténtalo de nuevo.";
@@ -1504,10 +1545,12 @@ function entrarComoDuenoPorNumero(digitos){
   users.push(user);
   guardar(K.users, users);
   fotoConductorDataURL = null;
-  entrar(user, false);
+  entrar(user, false, true);
 });
 $("#btn-logout").addEventListener("click", () => {
   sesion = null;
+  /* Avisos con la app cerrada: al salir, el servicio deja de sondear. */
+  try { if (window.TaxiAvisos) window.TaxiAvisos.clearUserId(); } catch(e){}
   if (window.TaxiSync && TaxiSync.afterLogout) TaxiSync.afterLogout();
   document.body.classList.add("sin-sesion");
   actualizarVisibilidadAdmin();
@@ -2395,6 +2438,11 @@ function renderAdmin(){
     guardar(K.users, users);
     if (window.TaxiSync && TaxiSync.driverSetActive) TaxiSync.driverSetActive(u, u.activo);
     notificar(u.id, "Acción del dueño", "Tu cuenta fue " + (u.activo ? "activada" : "desactivada") + " por el dueño.", null, false);
+    /* driverSetActive solo actualiza drivers.activo y no crea fila en
+       notifications: este es el único aviso entre dispositivos sin espejo
+       remoto, así que se espeja aquí para que también llegue con la app
+       cerrada (los demás avisos ya los crea supabase-client.js). */
+    notificarRemoto(u.telefono, u.activo ? "activacion" : "desactivacion", "Tu cuenta fue " + (u.activo ? "activada" : "desactivada") + " por el dueño.", null);
     guardar(K.notifs, notifs);
     toast("Cuenta de " + u.nombre + (u.activo ? " activada." : " desactivada."));
     renderAdmin();

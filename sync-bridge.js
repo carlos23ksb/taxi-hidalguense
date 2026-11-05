@@ -178,6 +178,11 @@ function mergeNotif(row, avisar){
   const me = (typeof yo === "function") ? yo() : null;
   if (!me) return;
   const localTripId = row.trip_id ? localIdDeRemote(row.trip_id) : null;
+  /* Si el aviso de solicitud nueva ya se creó en este celular al entrar
+     (avisarSolicitudesAbiertas), la fila remota del mismo viaje no se
+     duplica en Avisos. Solo aplica a viaje_nuevo: un viaje solo se publica
+     una vez; los mensajes sí se repiten y no se tocan. */
+  if (row.tipo === "viaje_nuevo" && localTripId != null && notifs.some(n => n.userId === me.id && n.tripId === localTripId && n.titulo === tituloDeTipo(row.tipo))) return;
   const n = { id: "n" + Date.now() + Math.floor(Math.random() * 999), rid, userId: me.id, titulo: tituloDeTipo(row.tipo), texto: row.texto, tripId: localTripId, ts: row.created_at ? Date.parse(row.created_at) : Date.now(), leida: !!row.leida };
   notifs.unshift(n);
   guardar(K.notifs, notifs);
@@ -223,7 +228,10 @@ async function pullLigero(){
   if (!online) return;
   const me = (typeof yo === "function") ? yo() : null;
   if (!me) return;
-  try { await pullConductores(); await pullViajes(); } catch (e){}
+  try { await pullConductores(); await pullViajes(); await pullNotifs(); } catch (e){}
+  /* Por si el aviso en vivo (Realtime) se perdió: las solicitudes que
+     siguen abiertas se avisan al entrar/actualizar, sin duplicar. */
+  try { if (typeof avisarSolicitudesAbiertas === "function") avisarSolicitudesAbiertas(); } catch (e){}
   refrescarVistas(); suscribirViajesActivos();
 }
 
@@ -274,7 +282,7 @@ function suscribirTodo(){
       unsubs.push(SB.onSolicitudesNuevas(async (payload) => {
         try {
           const res = await SB.getClient().from("trips").select("*").eq("id", payload.new.id).maybeSingle();
-          if (res.data){ await espejoViajeRemoto(res.data); guardar(K.trips, trips); refrescarVistas(); }
+          if (res.data){ await espejoViajeRemoto(res.data); guardar(K.trips, trips); refrescarVistas(); try { if (typeof avisarSolicitudesAbiertas === "function") avisarSolicitudesAbiertas(); } catch (e2){} }
         } catch (e){}
       }));
     }
@@ -369,6 +377,15 @@ const Sync = {
     const me = (typeof yo === "function") ? yo() : null;
     if (!me) return;
     SB.cancelarViaje(t._rid, normTel(me.telefono)).catch(() => {});
+  },
+  notificarRemoto({ telefono, tipo, texto, tripId }){
+    /* Espejo best-effort de un aviso a la tabla notifications (lo usa el
+       servicio de avisos con la app cerrada). Solo lo llaman los eventos
+       que la capa Supabase no cubre ya; si falla, el aviso local sigue
+       funcionando y nunca se rompe la página. */
+    if (!online) return;
+    try { SB.crearNotificacion({ destinatarioTelefono: normTel(telefono), tipo, texto, tripId: tripId || null }).catch(() => {}); }
+    catch (e){}
   },
   tripStarted(t){
     if (!online || !t._rid) return;

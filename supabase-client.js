@@ -488,24 +488,34 @@ export async function crearViaje({
     .single();
   if (error) throw error;
 
-  const conductores = await listarConductoresDisponibles();
+  /* Los avisos son best-effort: si la lista de conductores o un aviso
+     falla, el viaje ya creado no se pierde (antes, un fallo aquí dejaba
+     el viaje sin _rid en el cliente y ningún conductor avisado). El
+     conductor ve el viaje en Solicitudes y se le avisa al entrar si
+     sigue abierto. */
+  let conductores = [];
+  try { conductores = await listarConductoresDisponibles(); } catch (e) {}
   const avisados = new Set();
   for (const c of conductores) {
     avisados.add(c.telefono);
-    await crearNotificacion({
-      destinatarioTelefono: c.telefono,
-      tipo: 'viaje_nuevo',
-      texto: `Viaje nuevo: ${origen} → ${destino}, $${precioFijo}.`,
-      tripId: data.id,
-    });
+    try {
+      await crearNotificacion({
+        destinatarioTelefono: c.telefono,
+        tipo: 'viaje_nuevo',
+        texto: `Viaje nuevo: ${origen} → ${destino}, $${precioFijo}.`,
+        tripId: data.id,
+      });
+    } catch (e) {}
   }
   if (!avisados.has(OWNER_PHONE)) {
-    await crearNotificacion({
-      destinatarioTelefono: OWNER_PHONE,
-      tipo: 'viaje_nuevo',
-      texto: `Viaje nuevo: ${origen} → ${destino}, $${precioFijo}.`,
-      tripId: data.id,
-    });
+    try {
+      await crearNotificacion({
+        destinatarioTelefono: OWNER_PHONE,
+        tipo: 'viaje_nuevo',
+        texto: `Viaje nuevo: ${origen} → ${destino}, $${precioFijo}.`,
+        tripId: data.id,
+      });
+    } catch (e) {}
   }
   return data;
 }

@@ -9,7 +9,7 @@
 // ============================================================================
 
 export const SUPABASE_URL = 'https://fgktqammxgduxzufjbca.supabase.co'; // Proyecto taxi-hidalguense (org Taxi Hidalguense, cuenta carlos23ksb)
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna3RxYW1teGdkdXh6dWZqYmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTI1MjMsImV4cCI6MjA3Nzg2ODUyM30.2h0dA2Z9cO9gP4QwBJQl5q4kQfCq3i9yK2zIqLz8Z4M'; // anon key pública (empieza con 'eyJ...')
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZna3RxYW1teGdkdXh6dWZqYmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4Mzg4NTgsImV4cCI6MjEwOTQxNDg1OH0.9J8PGIy2cUGDCAQSsAY-3wy_sGmeZAsdhLfhM1nfX0E'; // anon key pública (empieza con 'eyJ...')
 
 // --- Avisos push con la app cerrada (pendiente el proyecto Firebase) ---
 // Clave pública VAPID del proyecto Firebase (ver README, paso externo único).
