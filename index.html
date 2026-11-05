@@ -517,7 +517,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
     <div class="sec-head"><h2>Calculadora de tarifa</h2></div>
     <div class="calc-box">
       <h3>¿Cuánto cuesta mi viaje?</h3>
-      <p class="hint" style="margin:0;">Escribe de dónde a dónde vas y se calcula la distancia por carretera y el precio en automático. También puedes escribir los km a mano.</p>
+      <p class="hint" style="margin:0;">Escribe de dónde a dónde vas y pulsa el botón: la distancia por carretera y el precio se calculan solos. Los km no se escriben a mano.</p>
       <div class="field" style="margin-top:12px;">
         <label for="calc-origen">Origen</label>
         <input class="in" type="text" id="calc-origen" placeholder="Calle, colonia o lugar (vacío = tu ubicación actual)" />
@@ -528,10 +528,6 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
       </div>
       <button class="btn btn-soft btn-block" type="button" id="btn-calc-ruta">Calcular distancia y precio</button>
       <p class="hint" id="calc-ruta-estado" style="margin-top:8px;"></p>
-      <div class="field" style="margin-top:12px;">
-        <label for="calc-km">Distancia del viaje (km)</label>
-        <input class="in" type="number" id="calc-km" inputmode="decimal" min="0" step="0.1" value="3" />
-      </div>
       <div class="field">
         <label>Horario</label>
         <div class="seg seg3" role="group" aria-label="Horario de la tarifa">
@@ -597,11 +593,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
           <label for="f-destino">Dirección exacta de destino</label>
           <input class="in" type="text" id="f-destino" placeholder="Calle, número, colonia, referencia" />
         </div>
-        <div class="field">
-          <label for="f-distancia">Distancia estimada (km)</label>
-          <input class="in" type="number" id="f-distancia" inputmode="decimal" min="0" step="0.1" value="3" />
-          <p class="hint" id="pedir-sugerencia"></p>
-        </div>
+        <p class="hint" id="pedir-sugerencia"></p>
         <button class="btn btn-soft btn-block" type="button" id="btn-ruta-viaje">Calcular distancia y precio</button>
         <p class="hint" id="ruta-viaje-estado" style="margin-top:8px;"></p>
         <div class="field">
@@ -1536,20 +1528,26 @@ function calcEsNoche(){
   if (calcModo === "noche") return true;
   return esNocheAhora();
 }
+let kmViaje = 0;
+let rutaCalculada = false;
 function renderCalculadora(){
-  const km = Number($("#calc-km").value) || 0;
   const noche = calcEsNoche();
-  const d = detalleTarifa(km, noche);
   const foraneo = $("#calc-foraneo").checked;
   const hora = new Date().getHours();
   $("#calc-hora-txt").textContent = "Hora actual: " + horaTxt(Date.now()) + " · " + (esNocheAhora() ? "Horario de noche" : "Horario de día") + (foraneo ? " · Viaje foráneo, mismo cálculo." : "");
+  const sug = $("#pedir-sugerencia");
+  if (!rutaCalculada){
+    $("#calc-resultado").innerHTML = `<div><span>Escribe origen y destino y pulsa «Calcular distancia y precio» para ver tu precio fijo.</span></div>`;
+    if (sug) sug.textContent = "Calcula tu ruta para ver el precio fijo.";
+    return;
+  }
+  const d = detalleTarifa(kmViaje, noche);
   $("#calc-resultado").innerHTML = `
     <div><span>${noche ? "Tarifa de noche" : "Tarifa de día"} · Base hasta ${KM_BASE} km</span><b>${money(d.base)}</b></div>
     <div><span>Km extra: ${d.extraKm} km × ${money(d.tarifaExtra)}</span><b>${money(d.extraTotal)}</b></div>
     <div><span>Distancia: ${d.km} km${foraneo ? " · Foráneo" : ""}</span><span>${d.extraKm} km extra</span></div>
     <div class="total"><span>Total del viaje</span><span>${money(d.total)}</span></div>`;
-  const sug = $("#pedir-sugerencia");
-  if (sug) sug.textContent = "Precio fijo según tarifa (" + (noche ? "noche" : "día") + ", " + km + " km" + (foraneo ? ", foráneo" : "") + "): " + money(d.total) + ".";
+  if (sug) sug.textContent = "Precio fijo según tarifa (" + (noche ? "noche" : "día") + ", " + kmViaje + " km" + (foraneo ? ", foráneo" : "") + "): " + money(d.total) + ".";
 }
 function setCalcModo(m){
   calcModo = m;
@@ -1561,17 +1559,16 @@ function setCalcModo(m){
 $("#calc-auto").addEventListener("click", () => setCalcModo("auto"));
 $("#calc-dia").addEventListener("click", () => setCalcModo("dia"));
 $("#calc-noche").addEventListener("click", () => setCalcModo("noche"));
-$("#calc-km").addEventListener("input", renderCalculadora);
 $("#calc-foraneo").addEventListener("change", renderCalculadora);
-$("#f-distancia").addEventListener("input", () => { renderCalculadora(); actualizarPrecioFijo(); });
 $("#f-foraneo").addEventListener("change", () => { renderCalculadora(); actualizarPrecioFijo(); });
 
 /* ============================================================
    DISTANCIA Y PRECIO EN AUTOMÁTICO (origen → destino)
    Geocodificación con Nominatim (OpenStreetMap) y ruta por
    carretera con OSRM. Servicios públicos gratuitos, sin clave.
-   Sin internet o sin resultado NO se inventa distancia: los km
-   quedan como estaban y se avisa que se escriban a mano.
+   La distancia NUNCA se escribe a mano: solo existe si se
+   calculó la ruta. Sin internet o sin resultado no hay precio
+   ni se puede pedir el viaje hasta calcular la ruta.
    ============================================================ */
 async function geocodificar(texto){
   const q = encodeURIComponent(texto.trim());
@@ -1609,8 +1606,8 @@ async function calcularRutaYPrecio(origenTxt, destinoTxt, btn, estadoEl){
     const destino = await geocodificar(destinoTxt);
     const kmReal = await distanciaCarreteraKm(origen, destino);
     const kmRedondeado = Math.round(kmReal * 10) / 10;
-    $("#calc-km").value = kmRedondeado;
-    $("#f-distancia").value = kmRedondeado;
+    kmViaje = kmRedondeado;
+    rutaCalculada = true;
     renderCalculadora();
     actualizarPrecioFijo();
     const d = detalleTarifa(kmRedondeado, calcEsNoche());
@@ -1621,9 +1618,9 @@ async function calcularRutaYPrecio(origenTxt, destinoTxt, btn, estadoEl){
     } else if (e && e.message === "sin-origen"){
       estadoEl.textContent = "Escribe el origen o usa tu ubicación para calcular la ruta.";
     } else if (e && e.message === "sin-ruta"){
-      estadoEl.textContent = "No se pudo trazar la ruta por carretera. Escribe los km a mano.";
+      estadoEl.textContent = "No se pudo trazar la ruta por carretera. Revisa las direcciones e inténtalo de nuevo.";
     } else {
-      estadoEl.textContent = "Sin internet no se puede calcular la ruta. Escribe los km a mano.";
+      estadoEl.textContent = "Sin internet no se puede calcular la ruta. Revisa tu conexión e inténtalo de nuevo.";
     }
   } finally {
     btn.disabled = false;
@@ -1642,6 +1639,17 @@ $("#btn-ruta-viaje").addEventListener("click", () => {
   const co = $("#calc-origen"); if (co) co.value = origen;
   const cd = $("#calc-destino"); if (cd) cd.value = destino;
   calcularRutaYPrecio(origen, destino, $("#btn-ruta-viaje"), $("#ruta-viaje-estado"));
+});
+/* Si el cliente cambia origen o destino después de calcular, la
+   ruta ya no corresponde: se invalida hasta volver a calcular. */
+["#calc-origen", "#calc-destino", "#f-origen", "#f-destino"].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener("input", () => {
+    rutaCalculada = false;
+    kmViaje = 0;
+    renderCalculadora();
+    actualizarPrecioFijo();
+  });
 });
 
 /* ============================================================
@@ -1851,14 +1859,18 @@ function renderPedir(){
 }
 /* Precio fijo según la tarifa, calculado antes de pedir el viaje. */
 function actualizarPrecioFijo(){
-  const km = Number($("#f-distancia").value) || 0;
   const noche = calcEsNoche();
   const foraneo = $("#f-foraneo").checked;
-  const d = detalleTarifa(km, noche);
   const txt = $("#precio-fijo-txt");
-  if (txt) txt.textContent = "Precio fijo según tarifa: " + money(d.total);
   const det = $("#precio-fijo-detalle");
-  if (det) det.textContent = "Base hasta " + KM_BASE + " km · " + (noche ? "noche" : "día") + (foraneo ? " · Foráneo" : "") + " · " + km + " km · Sedán";
+  if (!rutaCalculada){
+    if (txt) txt.textContent = "Precio fijo según tarifa: calcula tu ruta para verlo.";
+    if (det) det.textContent = "Base hasta " + KM_BASE + " km · " + (noche ? "noche" : "día") + (foraneo ? " · Foráneo" : "") + " · Sin ruta calculada · Sedán";
+    return;
+  }
+  const d = detalleTarifa(kmViaje, noche);
+  if (txt) txt.textContent = "Precio fijo según tarifa: " + money(d.total);
+  if (det) det.textContent = "Base hasta " + KM_BASE + " km · " + (noche ? "noche" : "día") + (foraneo ? " · Foráneo" : "") + " · " + kmViaje + " km · Sedán";
 }
 $("#pas-menos").addEventListener("click", () => { if (pasajeros > 1){ pasajeros--; $("#pas-num").textContent = pasajeros; } });
 $("#pas-mas").addEventListener("click", () => { if (pasajeros < 4){ pasajeros++; $("#pas-num").textContent = pasajeros; } });
@@ -1872,8 +1884,8 @@ $("#form-viaje-el").addEventListener("submit", e => {
   if (!origen) faltan.push("la dirección exacta de origen");
   if (!destino) faltan.push("la dirección exacta de destino");
   if (faltan.length){ err.textContent = "Para publicar tu solicitud falta: " + faltan.join(", ") + "."; err.classList.add("show"); return; }
+  if (!rutaCalculada){ err.textContent = "Primero pulsa «Calcular distancia y precio» para calcular tu viaje en automático."; err.classList.add("show"); return; }
   err.classList.remove("show");
-  const kmViaje = Number($("#f-distancia").value) || 0;
   const precioFijo = calcFare(kmViaje, calcEsNoche());
   const t = {
     id: Date.now(), clienteId: me.id, conductorId: null,
