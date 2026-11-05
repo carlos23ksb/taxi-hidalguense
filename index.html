@@ -517,7 +517,17 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
     <div class="sec-head"><h2>Calculadora de tarifa</h2></div>
     <div class="calc-box">
       <h3>¿Cuánto cuesta mi viaje?</h3>
-      <p class="hint" style="margin:0;">Escribe la distancia y mira el desglose al instante. La tarifa de día o de noche se aplica según la hora.</p>
+      <p class="hint" style="margin:0;">Escribe de dónde a dónde vas y se calcula la distancia por carretera y el precio en automático. También puedes escribir los km a mano.</p>
+      <div class="field" style="margin-top:12px;">
+        <label for="calc-origen">Origen</label>
+        <input class="in" type="text" id="calc-origen" placeholder="Calle, colonia o lugar (vacío = tu ubicación actual)" />
+      </div>
+      <div class="field">
+        <label for="calc-destino">Destino</label>
+        <input class="in" type="text" id="calc-destino" placeholder="Calle, colonia o lugar a donde vas" />
+      </div>
+      <button class="btn btn-soft btn-block" type="button" id="btn-calc-ruta">Calcular distancia y precio</button>
+      <p class="hint" id="calc-ruta-estado" style="margin-top:8px;"></p>
       <div class="field" style="margin-top:12px;">
         <label for="calc-km">Distancia del viaje (km)</label>
         <input class="in" type="number" id="calc-km" inputmode="decimal" min="0" step="0.1" value="3" />
@@ -592,6 +602,8 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
           <input class="in" type="number" id="f-distancia" inputmode="decimal" min="0" step="0.1" value="3" />
           <p class="hint" id="pedir-sugerencia"></p>
         </div>
+        <button class="btn btn-soft btn-block" type="button" id="btn-ruta-viaje">Calcular distancia y precio</button>
+        <p class="hint" id="ruta-viaje-estado" style="margin-top:8px;"></p>
         <div class="field">
           <div class="avail">
             <div><b style="font-size:14.5px;">Viaje foráneo</b><div class="hint">Cualquier destino, con el mismo cálculo de tarifa.</div></div>
@@ -1553,6 +1565,84 @@ $("#calc-km").addEventListener("input", renderCalculadora);
 $("#calc-foraneo").addEventListener("change", renderCalculadora);
 $("#f-distancia").addEventListener("input", () => { renderCalculadora(); actualizarPrecioFijo(); });
 $("#f-foraneo").addEventListener("change", () => { renderCalculadora(); actualizarPrecioFijo(); });
+
+/* ============================================================
+   DISTANCIA Y PRECIO EN AUTOMÁTICO (origen → destino)
+   Geocodificación con Nominatim (OpenStreetMap) y ruta por
+   carretera con OSRM. Servicios públicos gratuitos, sin clave.
+   Sin internet o sin resultado NO se inventa distancia: los km
+   quedan como estaban y se avisa que se escriban a mano.
+   ============================================================ */
+async function geocodificar(texto){
+  const q = encodeURIComponent(texto.trim());
+  const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=mx&viewbox=-99.6,19.4,-98.0,20.9&bounded=0&q=" + q;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error("red");
+  const arr = await res.json();
+  if (!arr || !arr.length) throw new Error("sin-resultado");
+  return { lat: Number(arr[0].lat), lon: Number(arr[0].lon), nombre: arr[0].display_name || texto.trim() };
+}
+async function distanciaCarreteraKm(a, b){
+  const url = "https://router.project-osrm.org/route/v1/driving/" + a.lon + "," + a.lat + ";" + b.lon + "," + b.lat + "?overview=false";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("red");
+  const j = await res.json();
+  if (!j || j.code !== "Ok" || !j.routes || !j.routes.length) throw new Error("sin-ruta");
+  return j.routes[0].distance / 1000;
+}
+async function calcularRutaYPrecio(origenTxt, destinoTxt, btn, estadoEl){
+  if (!destinoTxt || !destinoTxt.trim()){
+    estadoEl.textContent = "Escribe el destino para calcular la ruta.";
+    return;
+  }
+  btn.disabled = true;
+  estadoEl.textContent = "Buscando la ruta por carretera…";
+  try {
+    let origen;
+    if (origenTxt && origenTxt.trim()){
+      origen = await geocodificar(origenTxt);
+    } else if (ubicacionCliente && typeof ubicacionCliente.lat === "number" && typeof ubicacionCliente.lng === "number"){
+      origen = { lat: ubicacionCliente.lat, lon: ubicacionCliente.lng, nombre: "tu ubicación actual" };
+    } else {
+      throw new Error("sin-origen");
+    }
+    const destino = await geocodificar(destinoTxt);
+    const kmReal = await distanciaCarreteraKm(origen, destino);
+    const kmRedondeado = Math.round(kmReal * 10) / 10;
+    $("#calc-km").value = kmRedondeado;
+    $("#f-distancia").value = kmRedondeado;
+    renderCalculadora();
+    actualizarPrecioFijo();
+    const d = detalleTarifa(kmRedondeado, calcEsNoche());
+    estadoEl.textContent = "Ruta por carretera: " + kmRedondeado + " km · Precio fijo: " + money(d.total) + " (" + (d.night ? "noche" : "día") + ").";
+  } catch (e){
+    if (e && e.message === "sin-resultado"){
+      estadoEl.textContent = "No encontré ese lugar. Escríbelo con más detalle: calle, colonia y ciudad.";
+    } else if (e && e.message === "sin-origen"){
+      estadoEl.textContent = "Escribe el origen o usa tu ubicación para calcular la ruta.";
+    } else if (e && e.message === "sin-ruta"){
+      estadoEl.textContent = "No se pudo trazar la ruta por carretera. Escribe los km a mano.";
+    } else {
+      estadoEl.textContent = "Sin internet no se puede calcular la ruta. Escribe los km a mano.";
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+$("#btn-calc-ruta").addEventListener("click", () => {
+  const origen = $("#calc-origen").value;
+  const destino = $("#calc-destino").value;
+  const fo = $("#f-origen"); if (fo) fo.value = origen;
+  const fd = $("#f-destino"); if (fd) fd.value = destino;
+  calcularRutaYPrecio(origen, destino, $("#btn-calc-ruta"), $("#calc-ruta-estado"));
+});
+$("#btn-ruta-viaje").addEventListener("click", () => {
+  const origen = $("#f-origen").value;
+  const destino = $("#f-destino").value;
+  const co = $("#calc-origen"); if (co) co.value = origen;
+  const cd = $("#calc-destino"); if (cd) cd.value = destino;
+  calcularRutaYPrecio(origen, destino, $("#btn-ruta-viaje"), $("#ruta-viaje-estado"));
+});
 
 /* ============================================================
    CONDUCTORES CERCANOS
