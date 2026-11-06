@@ -14,6 +14,9 @@
 //  - El dueño (7712913066) es permanente: el registro con ese número crea
 //    la cuenta con is_owner=true y rol dueño; si ya existe, el flujo es
 //    inicio de sesión; ningún otro número puede ser dueño.
+//  - Ese mismo número también puede ser conductor: la cuenta en
+//    `accounts` sigue siendo una sola (dueño), y el perfil de conductor
+//    vive en `drivers` con ese mismo teléfono.
 //  - NINGÚN dato compartido vive en el almacenamiento del navegador: la sesión vive solo en
 //    memoria de esta página. Los datos compartidos (viajes, chats,
 //    notificaciones) viven en Supabase y llegan en vivo por Realtime.
@@ -231,6 +234,57 @@ export async function registerDriver({
   if (!fotoUrl) throw new Error('La foto de perfil es obligatoria.');
   if (!placa || !color || !modelo || !numeroEconomico) {
     throw new Error('Placa, color, modelo y número económico son obligatorios.');
+  }
+  const telNorm = normalizePhone(telefono);
+  /* El número del dueño puede ser dueño Y conductor con el mismo
+     número. Si su cuenta de dueño ya existe, la contraseña debe ser
+     la de dueño (para que nadie más registre ese número como
+     conductor); si aún no existe, se crea como dueño y como
+     conductor en el mismo registro. */
+  if (telNorm === OWNER_PHONE) {
+    const existing = await fetchAccount(telNorm);
+    if (existing) {
+      const ok = await verifyPassword(
+        password,
+        existing.password_salt,
+        existing.password_hash,
+      );
+      if (!ok) {
+        throw new Error(
+          'Ese número ya es del dueño. Para registrarte también como conductor, usa tu contraseña de dueño.',
+        );
+      }
+    } else {
+      await registerAccount({
+        telefono: telNorm,
+        nombre,
+        rol: 'dueño',
+        password,
+      });
+    }
+    const salt = generateSalt();
+    const { data, error } = await getClient()
+      .from('drivers')
+      .upsert(
+        {
+          telefono: telNorm,
+          nombre,
+          foto_url: fotoUrl,
+          placa,
+          color,
+          modelo,
+          numero_economico: numeroEconomico,
+          tipo_vehiculo: 'sedán',
+          password_hash: await hashPassword(password, salt),
+          password_salt: salt,
+          activo: true,
+        },
+        { onConflict: 'telefono' },
+      )
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
   const account = await registerAccount({
     telefono,

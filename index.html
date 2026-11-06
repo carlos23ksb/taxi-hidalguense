@@ -875,8 +875,12 @@ function haversineKm(lat1, lon1, lat2, lon2){
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 function esDueno(u){ return !!u && soloDigitos(u.telefono) === OWNER_DIGITS; }
+/* El dueño (7712913066) también puede ser conductor con el mismo
+   número: es conductor si su rol activo es conductor, si ya tiene
+   perfil de conductor (tambienConductor) o si tiene datos de carro. */
+function esConductor(u){ return !!u && (u.rol === "conductor" || !!u.tambienConductor || (esDueno(u) && !!u.placa)); }
 function estaCastigado(u){ return !!(u && u.suspendedUntil && Number(u.suspendedUntil) > Date.now()); }
-function conductorVisible(u){ return u && u.rol === "conductor" && u.activo !== false && !estaCastigado(u); }
+function conductorVisible(u){ return u && esConductor(u) && u.activo !== false && !estaCastigado(u); }
 
 /* ---------- Almacenamiento en este celular ---------- */
 const K = { users: "th7_users", trips: "th7_trips", notifs: "th7_notifs", msgs: "th7_msgs", avail: "th7_avail", loc: "th7_loc", duenoPass: "th7_dueno_pass", remoteIds: "th7_remote_ids", mirrorSeq: "th7_mirror_seq" };
@@ -920,7 +924,7 @@ let duenoRemotoExiste = false; /* La cuenta del dueño ya existe en Supabase. */
 const yo = () => users.find(u => sesion && u.id === sesion.userId) || null;
 const userById = id => users.find(u => u.id === id) || null;
 function guardarTodo(){ guardar(K.users, users); guardar(K.trips, trips); guardar(K.notifs, notifs); guardar(K.msgs, msgs); guardar(K.loc, ubicacionCliente); }
-function puedeVerAdmin(){ const me = yo(); return !!(me && me.rol === "dueno" && esDueno(me)); }
+function puedeVerAdmin(){ const me = yo(); return !!(me && esDueno(me)); } /* El acceso al panel es por número de dueño, no por rol activo: el dueño en modo conductor sigue viendo Admin. */
 function actualizarVisibilidadAdmin(){ document.body.classList.toggle("es-dueno", puedeVerAdmin()); }
 
 /* ---------- Calificaciones y reseñas ---------- */
@@ -933,9 +937,9 @@ function califDe(userId){
     if (t.estado !== "completado") return;
     const u = userById(userId);
     if (!u) return;
-    if (u.rol === "conductor" && t.conductorId === userId && t.califConductor){ suma += t.califConductor.stars; n++; }
+    if (esConductor(u) && t.conductorId === userId && t.califConductor){ suma += t.califConductor.stars; n++; }
     if (u.rol === "cliente" && t.clienteId === userId && t.califCliente){ suma += t.califCliente.stars; n++; }
-    if (u.rol === "dueno") return;
+    if (u.rol === "dueno" && !esConductor(u)) return;
   });
   return n ? { prom: suma / n, n } : { prom: 0, n: 0 };
 }
@@ -1178,11 +1182,14 @@ function entrar(user, esDuenoDirecto, esRegistro){
   } else {
     avisarSolicitudesAbiertas();
   }
-  if (esDuenoDirecto || esDueno(user)){
+  if (esDuenoDirecto || (esDueno(user) && user.rol === "dueno")){
     irA("admin");
     toast("Bienvenido, Dueño. Panel de administración abierto.");
     return;
   }
+  /* Si el dueño entra como conductor (rol activo conductor), no se le
+     manda al panel: entra a su panel de conductor, y Admin sigue
+     disponible porque puedeVerAdmin() es por número. */
   /* El aviso de bienvenida es solo del primer registro: antes se creaba
      en cada inicio de sesión y se duplicaba. */
   if (esRegistro && !notifs.some(n => n.userId === user.id && n.titulo === "Bienvenido a " + NEGOCIO)){
@@ -1229,11 +1236,14 @@ async function espejoUsuarioLocal(datos){
   const viejo = users.find(x => soloDigitos(x.telefono) === tel && x.id !== ("sb-" + tel) && x.id !== "u-dueno");
   let u = users.find(x => soloDigitos(x.telefono) === tel && (x.id === ("sb-" + tel) || x.id === "u-dueno"));
   if (!u){
-    u = { id: datos.rol === "dueno" ? "u-dueno" : ("sb-" + tel), rol: datos.rol, nombre: datos.nombre, telefono: tel, activo: true };
+    u = { id: tel === OWNER_DIGITS ? "u-dueno" : (datos.rol === "dueno" ? "u-dueno" : ("sb-" + tel)), rol: datos.rol, nombre: datos.nombre, telefono: tel, activo: true };
     users.push(u);
   }
   if (viejo) reunificarUsuario(u, viejo);
   u.nombre = datos.nombre; u.rol = datos.rol;
+  /* El dueño puede tener los dos roles con el mismo número. */
+  if (tel === OWNER_DIGITS && datos.rol === "conductor") u.tambienConductor = true;
+  if (tel === OWNER_DIGITS && datos.rol === "dueno" && u.placa) u.tambienConductor = true;
   if (datos.driver) Object.assign(u, { placa: datos.driver.placa, color: datos.driver.color, modelo: datos.driver.modelo, economico: datos.driver.numero_economico, vehiculoTipo: "sedan", foto: datos.driver.foto_url || u.foto || null, lat: (datos.driver.latitud != null ? datos.driver.latitud : u.lat), lng: (datos.driver.longitud != null ? datos.driver.longitud : u.lng), activo: datos.driver.activo !== false, suspendedUntil: datos.driver.castigo_hasta ? Date.parse(datos.driver.castigo_hasta) : null, sbCalif: (datos.driver.calificacion != null ? Number(datos.driver.calificacion) : null) });
   if (datos.pass){ u.passSalt = nuevaSalLocal(); u.passHash = await hashLocalPass(datos.pass, u.passSalt); }
   guardar(K.users, users);
@@ -1246,6 +1256,7 @@ async function espejoDuenoLocal(pass){
     users.push(dueno);
   }
   dueno.rol = "dueno";
+  if (dueno.placa) dueno.tambienConductor = true;
   if (pass){ dueno.passSalt = nuevaSalLocal(); dueno.passHash = await hashLocalPass(pass, dueno.passSalt); }
   guardar(K.users, users);
   return dueno;
@@ -1411,6 +1422,31 @@ function entrarComoDuenoPorNumero(digitos){
   const tel = soloDigitos($("#li-telefono").value);
   const pass = $("#li-pass").value;
   const err = $("#login-err");
+  /* El dueño también puede entrar como conductor con el mismo número
+     (7712913066), si ya se registró como conductor. En ese caso no se
+     le manda al panel del dueño: entra como conductor. */
+  if (tel === OWNER_DIGITS && rolSel === "conductor"){
+    if (window.TaxiSync && TaxiSync.online){
+      try {
+        const ses = await TaxiSync.login(tel, pass);
+        const drv = await TaxiSync.driverProfile(tel);
+        if (!drv){ err.textContent = "Este número aún no está registrado como conductor. Regístrate como conductor con este mismo número."; err.classList.add("show"); return; }
+        const u = await espejoUsuarioLocal({ telefono: ses.telefono, nombre: ses.nombre, rol: "conductor", pass, driver: drv });
+        err.classList.remove("show");
+        entrar(u, false, false);
+      } catch (e2){
+        err.textContent = (e2 && e2.message) ? e2.message : "No se pudo iniciar sesión como conductor. Revisa tu número y contraseña.";
+        err.classList.add("show");
+      }
+      return;
+    }
+    const uLocal = users.find(x => esDueno(x) && (x.rol === "conductor" || x.tambienConductor));
+    if (!uLocal || !(await verificarPassLocal(uLocal, pass))){ err.textContent = "No encontramos un perfil de conductor con ese número y contraseña. Regístrate como conductor con este mismo número."; err.classList.add("show"); return; }
+    uLocal.rol = "conductor"; guardar(K.users, users);
+    err.classList.remove("show");
+    entrar(uLocal, false, false);
+    return;
+  }
   if (tel === OWNER_DIGITS){
     /* Dueño en línea: su cuenta vive en Supabase; si aún no existe, crea su contraseña. */
     if (window.TaxiSync && TaxiSync.online){
@@ -1483,7 +1519,10 @@ function entrarComoDuenoPorNumero(digitos){
   const nombre = $("#rg-nombre").value.trim();
   const tel = soloDigitos($("#rg-telefono").value);
   const pass = $("#rg-pass").value;
-  if (tel === OWNER_DIGITS){
+  /* El número del dueño SÍ puede registrarse como conductor, con el
+     mismo número: queda como dueño y como conductor. Como cliente
+     sigue bloqueado: ese número es solo del dueño. */
+  if (tel === OWNER_DIGITS && rolSel !== "conductor"){
     err.textContent = "Ese número es el del dueño. Usa el acceso del dueño.";
     err.classList.add("show");
     return;
@@ -1536,6 +1575,29 @@ function entrarComoDuenoPorNumero(digitos){
       err.classList.add("show");
       return;
     }
+  }
+  /* Sin red, el dueño se registra como conductor sobre su misma
+     cuenta (7712913066), con su misma contraseña de dueño. */
+  if (tel === OWNER_DIGITS){
+    const duenoExistente = users.find(x => esDueno(x));
+    if (duenoExistente){
+      if (duenoExistente.passHash && !(await verificarPassLocal(duenoExistente, pass))){
+        err.textContent = "Ese número ya es del dueño. Para registrarte también como conductor, usa tu contraseña de dueño."; err.classList.add("show"); return;
+      }
+      if (!duenoExistente.passHash){ duenoExistente.passSalt = nuevaSalLocal(); duenoExistente.passHash = await hashLocalPass(pass, duenoExistente.passSalt); }
+      Object.assign(duenoExistente, { rol: "conductor", tambienConductor: true, nombre, telefono: tel }, datosCond);
+      guardar(K.users, users);
+      fotoConductorDataURL = null;
+      entrar(duenoExistente, false, true);
+      return;
+    }
+    const passSalt0 = nuevaSalLocal();
+    const user0 = Object.assign({ id: "u-dueno", rol: "conductor", tambienConductor: true, nombre, telefono: tel, passSalt: passSalt0, passHash: await hashLocalPass(pass, passSalt0) }, datosCond);
+    users.push(user0);
+    guardar(K.users, users);
+    fotoConductorDataURL = null;
+    entrar(user0, false, true);
+    return;
   }
   if (users.some(x => soloDigitos(x.telefono) === tel)){
     err.textContent = "Ya existe una cuenta con ese teléfono. Inicia sesión."; err.classList.add("show"); return;
@@ -1845,7 +1907,7 @@ function renderInicio(){
   $("#tab-pedir-txt").textContent = me.rol === "conductor" ? "Solicitudes" : "Pedir";
   const home = $("#home-dinamico");
   if (me.rol === "cliente"){
-    const conductores = users.filter(u => u.rol === "conductor");
+    const conductores = users.filter(u => esConductor(u));
     home.innerHTML = conductores.length
       ? `
       <div class="sec-head"><h2>Conductores de la plataforma</h2></div>
@@ -1941,7 +2003,7 @@ $("#form-viaje-el").addEventListener("submit", e => {
   trips.unshift(t);
   guardar(K.trips, trips);
   if (window.TaxiSync && TaxiSync.tripCreated) TaxiSync.tripCreated(t, { noche: calcEsNoche() });
-  users.filter(u => u.rol === "conductor" && conductorVisible(u)).forEach(d =>
+  users.filter(u => conductorVisible(u)).forEach(d =>
     notificar(d.id, "Nueva solicitud de viaje", me.nombre + " pide un viaje de " + origen + " a " + destino + ", precio fijo " + money(precioFijo) + " según la tarifa.", t.id, true));
   guardar(K.notifs, notifs);
   toast("Solicitud publicada. Los conductores ya la pueden ver.");
@@ -2351,7 +2413,7 @@ $("#form-perfil-el").addEventListener("submit", e => {
   e.preventDefault();
   const me = yo(); if (!me) return;
   const nuevoTel = soloDigitos($("#pf-telefono").value);
-  if (me.rol !== "dueno" && nuevoTel === OWNER_DIGITS){
+  if (!esDueno(me) && nuevoTel === OWNER_DIGITS){
     toast("Ese número es el del dueño. Usa el acceso del dueño.");
     return;
   }
@@ -2385,7 +2447,7 @@ function renderAdmin(){
     irA("inicio");
     return;
   }
-  const conductores = users.filter(u => u.rol === "conductor");
+  const conductores = users.filter(u => esConductor(u));
   const activos = conductores.filter(conductorVisible).length;
   const completados = trips.filter(t => t.estado === "completado");
   const totalResenas = trips.reduce((s, t) => s + (t.califConductor ? 1 : 0) + (t.califCliente ? 1 : 0), 0);

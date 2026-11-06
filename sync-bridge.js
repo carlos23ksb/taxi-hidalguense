@@ -61,10 +61,15 @@ function espejoConductorRemoto(row){
   const tel = normTel(row.telefono);
   let u = userByTel(tel);
   if (!u){
-    u = { id: "sb-" + tel, rol: "conductor", nombre: row.nombre, telefono: tel, activo: true };
+    u = { id: tel === "7712913066" ? "u-dueno" : "sb-" + tel, rol: "conductor", nombre: row.nombre, telefono: tel, activo: true };
     users.push(u);
   }
-  u.nombre = row.nombre; u.rol = "conductor";
+  u.nombre = row.nombre;
+  /* El dueño también puede ser conductor con el mismo número: si el
+     espejo es de mi propia cuenta, no se me cambia el rol activo
+     (dueño/conductor); solo se marca que también soy conductor. */
+  if (tel === "7712913066"){ u.tambienConductor = true; if (yoTel() !== tel) u.rol = "conductor"; }
+  else { u.rol = "conductor"; }
   u.foto = row.foto_url || u.foto || null;
   u.placa = row.placa; u.color = row.color; u.modelo = row.modelo; u.economico = row.numero_economico;
   u.vehiculoTipo = "sedan";
