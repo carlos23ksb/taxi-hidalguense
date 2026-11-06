@@ -307,7 +307,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
     <span class="dl-free">Descarga libre · Sin registrarte</span>
     <h2>Descarga la aplicación sin registrarte</h2>
     <p>No te pedimos cuenta, nombre ni ningún dato para descargarla. Primero la instalas en tu celular y ya adentro de la aplicación te registras cuando quieras, como cliente o como conductor.</p>
-    <a class="btn" href="taxi-hidalguense-v10.apk" download="TaxiHidalguense.apk">
+    <a class="btn" href="taxi-hidalguense-v11.apk" download="TaxiHidalguense.apk">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4.5-4.5M12 15 7.5 10.5"/><path d="M4 19h16"/></svg>
       Descargar la aplicación ahora
     </a>
@@ -494,7 +494,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         <h3>La app en tu pantalla de inicio</h3>
         <p>Descárgala una vez y entra con un toque.</p>
       </div>
-      <a class="btn" href="taxi-hidalguense-v10.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
+      <a class="btn" href="taxi-hidalguense-v11.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
     </div>
     <ol class="install-steps" id="install-steps-home" style="display:none;">
       <li>En <b>Android</b>: menú del navegador (⋮) → <b>«Instalar app»</b> o «Agregar a pantalla de inicio».</li>
@@ -862,7 +862,7 @@ function textoWhatsAppDueno(){
     txt += " Salgo de " + origen + " y voy a " + destino + ".";
     if (typeof rutaCalculada !== "undefined" && rutaCalculada && typeof kmViaje !== "undefined"){
       const precioFijo = calcFare(kmViaje, calcEsNoche());
-      txt += " Distancia: " + kmViaje + " km" + (($("#f-foraneo") && $("#f-foraneo").checked) ? " (foráneo)" : "") + ". Precio fijo: " + money(precioFijo) + ".";
+      txt += " Distancia: " + kmViaje + " km (" + (calcEsNoche() ? "noche" : "día") + ")" + (($("#f-foraneo") && $("#f-foraneo").checked) ? ", foráneo" : "") + ". Precio fijo: " + money(precioFijo) + ".";
       txt += " Pasajeros: " + (typeof pasajeros !== "undefined" ? pasajeros : 1) + ".";
     }
     if (notas) txt += " Notas: " + notas + ".";
@@ -872,18 +872,20 @@ function textoWhatsAppDueno(){
 }
 /* Avisa al dueño en la app (tabla notifications) que alguien le escribió
    por WhatsApp. Best-effort: si falla, el WhatsApp ya salió igual. */
-function avisarDuenoWhatsApp(){
+function avisarDuenoWhatsApp(tripId){
   try {
     const me = (typeof yo === "function") ? yo() : null;
     const origen = ($("#f-origen") && $("#f-origen").value.trim()) || "";
     const destino = ($("#f-destino") && $("#f-destino").value.trim()) || "";
+    const notas = ($("#f-notas") && $("#f-notas").value.trim()) || "";
     let texto = me ? (me.nombre + " te escribió por WhatsApp para pedir un viaje.") : "Alguien te escribió por WhatsApp desde la página para pedir un taxi.";
     if (origen && destino){
-      texto = (me ? me.nombre : "Un cliente") + " pidió un viaje por WhatsApp: de " + origen + " a " + destino;
-      if (typeof rutaCalculada !== "undefined" && rutaCalculada && typeof kmViaje !== "undefined") texto += ", precio fijo " + money(calcFare(kmViaje, calcEsNoche())) + " (" + kmViaje + " km)";
-      texto += ".";
+      texto = (me ? (me.nombre + " (" + me.telefono + ")") : "Un cliente") + " pidió un viaje por WhatsApp: lo recogen en " + origen + " y va a " + destino;
+      if (typeof rutaCalculada !== "undefined" && rutaCalculada && typeof kmViaje !== "undefined") texto += ". Recorre " + kmViaje + " km (" + (calcEsNoche() ? "noche" : "día") + ")" + (($("#f-foraneo") && $("#f-foraneo").checked) ? ", foráneo" : "") + ", precio fijo " + money(calcFare(kmViaje, calcEsNoche()));
+      texto += ". Pasajeros: " + (typeof pasajeros !== "undefined" ? pasajeros : 1) + ".";
+      if (notas) texto += " Notas: " + notas + ".";
     }
-    notificarRemoto(OWNER_DIGITS, "Solicitud por WhatsApp", texto, null);
+    notificarRemoto(OWNER_DIGITS, "Solicitud por WhatsApp", texto, tripId || null);
   } catch(e){}
 }
 
@@ -2081,7 +2083,11 @@ $("#form-viaje-el").addEventListener("submit", e => {
   users.filter(u => conductorVisible(u)).forEach(d =>
     notificar(d.id, "Nueva solicitud de viaje", me.nombre + " pide un viaje de " + origen + " a " + destino + ", precio fijo " + money(precioFijo) + " según la tarifa.", t.id, true));
   guardar(K.notifs, notifs);
-  toast("Solicitud publicada. Los conductores ya la pueden ver.");
+  /* El pedido también va directo al dueño por WhatsApp (con km, precio,
+     origen, destino y todo) y le llega como aviso en la aplicación. */
+  avisarDuenoWhatsApp(t.id);
+  window.open(waDuenoLink(textoWhatsAppDueno()), "_blank");
+  toast("Solicitud publicada. También se le envió al dueño por WhatsApp.");
   irA("viajes");
 });
 /* Pedirlo directo al dueño por WhatsApp: abre el chat con origen, destino,
