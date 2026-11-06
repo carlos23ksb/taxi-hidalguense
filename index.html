@@ -307,7 +307,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
     <span class="dl-free">Descarga libre · Sin registrarte</span>
     <h2>Descarga la aplicación sin registrarte</h2>
     <p>No te pedimos cuenta, nombre ni ningún dato para descargarla. Primero la instalas en tu celular y ya adentro de la aplicación te registras cuando quieras, como cliente o como conductor.</p>
-    <a class="btn" href="taxi-hidalguense-v6.apk" download="TaxiHidalguense.apk">
+    <a class="btn" href="taxi-hidalguense-v7.apk" download="TaxiHidalguense.apk">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4.5-4.5M12 15 7.5 10.5"/><path d="M4 19h16"/></svg>
       Descargar la aplicación ahora
     </a>
@@ -379,6 +379,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
             <label for="rg-telefono">Teléfono de tu cuenta</label>
             <input class="in" type="tel" id="rg-telefono" placeholder="Tu número de 10 dígitos" autocomplete="tel" />
             <p class="hint">Es el número con el que iniciarás sesión. La comunicación con tu conductor o cliente se hace por el chat de la aplicación.</p>
+            <p class="hint" id="rg-dueno-hint" style="display:none;">Número del dueño: te registrarás también como conductor con este mismo número.</p>
           </div>
           <div class="field">
             <label for="rg-pass">Crea una contraseña</label>
@@ -484,7 +485,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         <h3>La app en tu pantalla de inicio</h3>
         <p>Descárgala una vez y entra con un toque.</p>
       </div>
-      <a class="btn" href="taxi-hidalguense-v6.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
+      <a class="btn" href="taxi-hidalguense-v7.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
     </div>
     <ol class="install-steps" id="install-steps-home" style="display:none;">
       <li>En <b>Android</b>: menú del navegador (⋮) → <b>«Instalar app»</b> o «Agregar a pantalla de inicio».</li>
@@ -1100,6 +1101,22 @@ function setRol(r){
 }
 $("#rol-cliente").addEventListener("click", () => setRol("cliente"));
 $("#rol-conductor").addEventListener("click", () => setRol("conductor"));
+/* El número del dueño es dueño Y conductor con el mismo número: en
+   cuanto se escribe en el teléfono, la forma pasa sola a Conductor,
+   para que nunca le salga el error del dueño. */
+function autoRolDueno(input){
+  if (!input) return;
+  input.addEventListener("input", () => {
+    const d = input.value.replace(/\D/g, "");
+    if (d === OWNER_DIGITS && rolSel !== "conductor"){
+      setRol("conductor");
+      const h = $("#rg-dueno-hint");
+      if (h) h.style.display = "block";
+    }
+  });
+}
+autoRolDueno($("#rg-telefono"));
+autoRolDueno($("#li-telefono"));
 function mostrarRegistro(v){
   $("#form-login-el").style.display = v ? "none" : "block";
   $("#form-register-el").style.display = v ? "block" : "none";
@@ -1519,6 +1536,10 @@ function entrarComoDuenoPorNumero(digitos){
   const err = $("#reg-err");
   const nombre = $("#rg-nombre").value.trim();
   const tel = soloDigitos($("#rg-telefono").value);
+  /* DEFINITIVO: el número del dueño SIEMPRE se registra como conductor
+     (dueño y conductor con el mismo número). Se fuerza la pestaña
+     Conductor antes de validar, así el error del dueño no puede salir. */
+  if (tel === OWNER_DIGITS) setRol("conductor");
   const pass = $("#rg-pass").value;
   /* El número del dueño SÍ puede registrarse como conductor, con el
      mismo número: queda como dueño y como conductor. Como cliente
