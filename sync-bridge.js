@@ -14,8 +14,9 @@
      - NUNCA se siembran conductores, viajes ni datos de muestra.
      - Sin red o si Supabase no responde, la app sigue en local
        (localStorage) y reintenta en el siguiente inicio de sesión.
-     - La sesión NO vive en localStorage: solo en memoria de la página
-       (el módulo Supabase y la app la guardan en variables).
+     - La sesión queda guardada en este celular (localStorage, solo el
+       usuario ya registrado, sin contraseñas): al cerrar la app y volver
+       a entrar sigue iniciada; solo "Cerrar sesión" la borra.
      - Sin distancia no se inventa: un viaje sin km queda solo en local.
    Si este archivo o los módulos no cargan, la app sigue en modo local.
    ============================================================================ */
@@ -339,6 +340,13 @@ const Sync = {
     }
   },
   async login(telefono, password){ const ses = await SB.login({ telefono, password }); online = true; return ses; },
+  async restoreSession(user){
+    /* Restaura la sesión en línea del usuario guardado en este celular,
+       sin pedir contraseña de nuevo. */
+    try { await SB.listarConductoresDisponibles(); online = true; } catch (e){ online = false; }
+    const ses = SB.restoreSession({ telefono: user.telefono, nombre: user.nombre, rol: user.rol, is_owner: normTel(user.telefono) === normTel(SB.OWNER_PHONE) });
+    return ses;
+  },
   async registerClient(d){ const acc = await SB.registerClient(d); online = true; return { telefono: acc.telefono, nombre: acc.nombre, rol: acc.rol, driver: null }; },
   async registerDriver(d){
     const drv = await SB.registerDriver(d);

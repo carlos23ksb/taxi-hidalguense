@@ -17,9 +17,11 @@
 //  - Ese mismo número también puede ser conductor: la cuenta en
 //    `accounts` sigue siendo una sola (dueño), y el perfil de conductor
 //    vive en `drivers` con ese mismo teléfono.
-//  - NINGÚN dato compartido vive en el almacenamiento del navegador: la sesión vive solo en
-//    memoria de esta página. Los datos compartidos (viajes, chats,
-//    notificaciones) viven en Supabase y llegan en vivo por Realtime.
+//  - La sesión en línea se restaura desde el usuario ya registrado en
+//    este celular (sin guardar contraseñas): al cerrar y volver a entrar
+//    sigue iniciada, y solo "Cerrar sesión" la borra. Los datos
+//    compartidos (viajes, chats, notificaciones) viven en Supabase y
+//    llegan en vivo por Realtime.
 //  - Cada evento importante genera una fila en `notifications` y Realtime
 //    la empuja al centro de notificaciones del destinatario.
 // ============================================================================
@@ -68,12 +70,23 @@ export function getClient() {
 }
 
 // ---------------------------------------------------------------------------
-// Sesión en memoria (sin persistencia en el navegador: al cerrar la página se cierra sesión)
+// Sesión en memoria, restaurable desde el usuario local ya registrado
+// (sin guardar contraseñas: solo se restaura telefono/nombre/rol).
 // ---------------------------------------------------------------------------
 
 let _session = null; // { telefono, nombre, rol, is_owner }
 
 export function getSession() {
+  return _session;
+}
+
+/** Restaura la sesión en línea del usuario ya registrado en este celular
+ *  (después de un inicio de sesión previo en este mismo dispositivo).
+ *  No recibe ni guarda contraseñas. */
+export function restoreSession({ telefono, nombre, rol, is_owner }) {
+  const tel = normalizePhone(telefono);
+  if (!tel) throw new Error('No hay sesión guardada.');
+  _session = { telefono: tel, nombre: nombre || '', rol: rol || 'cliente', is_owner: !!is_owner };
   return _session;
 }
 

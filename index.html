@@ -883,7 +883,7 @@ function estaCastigado(u){ return !!(u && u.suspendedUntil && Number(u.suspended
 function conductorVisible(u){ return u && esConductor(u) && u.activo !== false && !estaCastigado(u); }
 
 /* ---------- Almacenamiento en este celular ---------- */
-const K = { users: "th7_users", trips: "th7_trips", notifs: "th7_notifs", msgs: "th7_msgs", avail: "th7_avail", loc: "th7_loc", duenoPass: "th7_dueno_pass", remoteIds: "th7_remote_ids", mirrorSeq: "th7_mirror_seq" };
+const K = { users: "th7_users", trips: "th7_trips", notifs: "th7_notifs", msgs: "th7_msgs", avail: "th7_avail", loc: "th7_loc", duenoPass: "th7_dueno_pass", remoteIds: "th7_remote_ids", mirrorSeq: "th7_mirror_seq", sesion: "th7_sesion" };
 function cargar(clave, def){ try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
 function guardar(clave, val){ try { localStorage.setItem(clave, JSON.stringify(val)); } catch(e){} }
 
@@ -915,7 +915,8 @@ let users = cargar(K.users, []);
 let trips = cargar(K.trips, []);
 let notifs = cargar(K.notifs, []);
 let msgs = cargar(K.msgs, {});
-let sesion = null; /* V7: la sesión vive solo en memoria de la página, nunca en localStorage. Al cerrar la página hay que iniciar sesión de nuevo. */
+let sesion = cargar(K.sesion, null); /* Sesión guardada en este celular: al cerrar la app o la página y volver a entrar, sigue iniciada. Solo se cierra con "Cerrar sesión". */
+if (sesion && (!sesion.userId || !users.some(u => u.id === sesion.userId))) sesion = null;
 let disponible = cargar(K.avail, true);
 let ubicacionCliente = cargar(K.loc, { lat: 20.12, lng: -98.73, manual: true });
 let resenasRemotas = []; /* Reseñas espejadas desde Supabase (solo lectura). */
@@ -1162,7 +1163,7 @@ function entrar(user, esDuenoDirecto, esRegistro){
   sesion = { userId: user.id };
   /* Avisos con la app cerrada: pasa el teléfono al servicio nativo. */
   try { if (window.TaxiAvisos) window.TaxiAvisos.setUserId(String(user.telefono || "")); } catch(e){}
-  /* V7: la sesión NO se guarda en localStorage (solo en memoria). */
+  guardar(K.sesion, sesion); /* Sesión guardada en este celular: sigue iniciada al cerrar y volver a entrar. */
   document.body.classList.remove("sin-sesion");
   actualizarVisibilidadAdmin();
   $("#btn-bell").style.display = "grid";
@@ -1611,6 +1612,7 @@ function entrarComoDuenoPorNumero(digitos){
 });
 $("#btn-logout").addEventListener("click", () => {
   sesion = null;
+  try { localStorage.removeItem(K.sesion); } catch(e){} /* Solo "Cerrar sesión" borra la sesión guardada. */
   /* Avisos con la app cerrada: al salir, el servicio deja de sondear. */
   try { if (window.TaxiAvisos) window.TaxiAvisos.clearUserId(); } catch(e){}
   if (window.TaxiSync && TaxiSync.afterLogout) TaxiSync.afterLogout();
@@ -2604,6 +2606,21 @@ function esVistaAPK(){
     $$(".view").forEach(v => v.classList.toggle("active", v.id === "view-auth"));
   }
 })();
+/* Restaurar la sesión en línea al volver a entrar: si la sesión local
+   sigue guardada, se restaura también en Supabase y se baja lo nuevo.
+   No se guarda ninguna contraseña, solo el usuario ya registrado en
+   este celular. */
+let sesionRestaurada = false;
+function restaurarSesionRemota(){
+  const me = yo();
+  if (!me || !window.TaxiSync || !TaxiSync.restoreSession) return;
+  if (sesionRestaurada) return;
+  sesionRestaurada = true;
+  try { if (window.TaxiAvisos) window.TaxiAvisos.setUserId(String(me.telefono || "")); } catch(e){}
+  Promise.resolve().then(() => TaxiSync.restoreSession(me)).then(() => TaxiSync.afterLogin(me)).then(() => avisarSolicitudesAbiertas()).catch(() => {});
+}
+setTimeout(restaurarSesionRemota, 600);
+window.addEventListener("load", restaurarSesionRemota);
 </script>
 <script src="./sync-bridge.js"></script>
 </body>
