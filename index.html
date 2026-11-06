@@ -307,7 +307,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
     <span class="dl-free">Descarga libre · Sin registrarte</span>
     <h2>Descarga la aplicación sin registrarte</h2>
     <p>No te pedimos cuenta, nombre ni ningún dato para descargarla. Primero la instalas en tu celular y ya adentro de la aplicación te registras cuando quieras, como cliente o como conductor.</p>
-    <a class="btn" href="taxi-hidalguense-v9.apk" download="TaxiHidalguense.apk">
+    <a class="btn" href="taxi-hidalguense-v10.apk" download="TaxiHidalguense.apk">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4.5-4.5M12 15 7.5 10.5"/><path d="M4 19h16"/></svg>
       Descargar la aplicación ahora
     </a>
@@ -336,6 +336,15 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
       </div>
     </div>
   </div>
+
+  <section class="blk" id="contacto-dueno">
+    <div class="sec-head"><h2>¿Necesitas un taxi ahora?</h2></div>
+    <div class="card">
+      <p style="margin:0 0 10px;">Escríbele <b>directo al dueño por WhatsApp</b> al <b>771 761 4419</b> y pídele tu viaje con precio fijo.</p>
+      <a class="btn btn-block" id="btn-wa-dueno-libre" href="https://wa.me/527717614419?text=Hola%2C%20quiero%20pedir%20un%20taxi%20con%20Taxi%20Hidalguense." target="_blank" rel="noopener" style="background:#25D366;color:#fff;">Escribirle al dueño por WhatsApp</a>
+      <p class="hint" style="text-align:center;margin:8px 0 0;">Te contesta directo por WhatsApp y también le llega tu mensaje a la aplicación.</p>
+    </div>
+  </section>
 
   <section class="blk" id="registro">
     <div class="sec-head"><h2>Regístrate desde la aplicación</h2></div>
@@ -485,7 +494,7 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
         <h3>La app en tu pantalla de inicio</h3>
         <p>Descárgala una vez y entra con un toque.</p>
       </div>
-      <a class="btn" href="taxi-hidalguense-v9.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
+      <a class="btn" href="taxi-hidalguense-v10.apk" download="TaxiHidalguense.apk">Descargar la aplicación</a>
     </div>
     <ol class="install-steps" id="install-steps-home" style="display:none;">
       <li>En <b>Android</b>: menú del navegador (⋮) → <b>«Instalar app»</b> o «Agregar a pantalla de inicio».</li>
@@ -634,6 +643,8 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6.5 17l1.6-5.2A2 2 0 0 1 10 10.4h4a2 2 0 0 1 1.9 1.4L17.5 17"/><circle cx="7.5" cy="19.5" r="1.6"/><circle cx="16.5" cy="19.5" r="1.6"/></svg>
           Publicar mi solicitud
         </button>
+        <button class="btn btn-block" type="button" id="btn-wa-dueno" style="background:#25D366;color:#fff;margin-top:8px;">Pedirlo directo al dueño por WhatsApp</button>
+        <p class="hint" style="text-align:center;">Te abre WhatsApp con el dueño (771 761 4419) y el viaje ya con precio, y al dueño también le llega el aviso en la aplicación.</p>
         <p class="hint" style="text-align:center;">Tu solicitud llega a los conductores disponibles y te avisamos aquí mismo cuando respondan.</p>
       </form>
     </div>
@@ -835,6 +846,46 @@ body.es-dueno .tabbar button[data-go="admin"]{display:flex}
    ============================================================ */
 const NEGOCIO = "Taxi Hidalguense";
 const OWNER_DIGITS = "7712913066";
+/* WhatsApp del dueño para contacto directo (771 761 4419): la gente le
+   escribe por WhatsApp y al dueño también le llega el aviso en la app. */
+const OWNER_WHATSAPP = "7717614419";
+function waDuenoLink(mensaje){ return "https://wa.me/52" + OWNER_WHATSAPP + "?text=" + encodeURIComponent(mensaje); }
+/* Mensaje para el dueño con origen, destino, precio fijo y datos del viaje. */
+function textoWhatsAppDueno(){
+  const me = (typeof yo === "function") ? yo() : null;
+  const origen = ($("#f-origen") && $("#f-origen").value.trim()) || "";
+  const destino = ($("#f-destino") && $("#f-destino").value.trim()) || "";
+  const notas = ($("#f-notas") && $("#f-notas").value.trim()) || "";
+  const quien = me ? (me.nombre + " (" + me.telefono + ")") : "un cliente";
+  let txt = "Hola, quiero pedir un viaje con Taxi Hidalguense. Soy " + quien + ".";
+  if (origen && destino){
+    txt += " Salgo de " + origen + " y voy a " + destino + ".";
+    if (typeof rutaCalculada !== "undefined" && rutaCalculada && typeof kmViaje !== "undefined"){
+      const precioFijo = calcFare(kmViaje, calcEsNoche());
+      txt += " Distancia: " + kmViaje + " km" + (($("#f-foraneo") && $("#f-foraneo").checked) ? " (foráneo)" : "") + ". Precio fijo: " + money(precioFijo) + ".";
+      txt += " Pasajeros: " + (typeof pasajeros !== "undefined" ? pasajeros : 1) + ".";
+    }
+    if (notas) txt += " Notas: " + notas + ".";
+    txt += " ¿Me lo confirmas?";
+  }
+  return txt;
+}
+/* Avisa al dueño en la app (tabla notifications) que alguien le escribió
+   por WhatsApp. Best-effort: si falla, el WhatsApp ya salió igual. */
+function avisarDuenoWhatsApp(){
+  try {
+    const me = (typeof yo === "function") ? yo() : null;
+    const origen = ($("#f-origen") && $("#f-origen").value.trim()) || "";
+    const destino = ($("#f-destino") && $("#f-destino").value.trim()) || "";
+    let texto = me ? (me.nombre + " te escribió por WhatsApp para pedir un viaje.") : "Alguien te escribió por WhatsApp desde la página para pedir un taxi.";
+    if (origen && destino){
+      texto = (me ? me.nombre : "Un cliente") + " pidió un viaje por WhatsApp: de " + origen + " a " + destino;
+      if (typeof rutaCalculada !== "undefined" && rutaCalculada && typeof kmViaje !== "undefined") texto += ", precio fijo " + money(calcFare(kmViaje, calcEsNoche())) + " (" + kmViaje + " km)";
+      texto += ".";
+    }
+    notificarRemoto(OWNER_DIGITS, "Solicitud por WhatsApp", texto, null);
+  } catch(e){}
+}
 
 /* ---------- TARIFAS: constantes únicas ---------- */
 const KM_BASE = 4;
@@ -1084,6 +1135,7 @@ document.addEventListener("click", e => {
   irA(b.dataset.go);
 });
 $("#btn-bell").addEventListener("click", () => { if (yo()) irA("avisos"); });
+$("#btn-wa-dueno-libre").addEventListener("click", () => { avisarDuenoWhatsApp(); });
 
 /* ============================================================
    AUTENTICACIÓN
@@ -2031,6 +2083,17 @@ $("#form-viaje-el").addEventListener("submit", e => {
   guardar(K.notifs, notifs);
   toast("Solicitud publicada. Los conductores ya la pueden ver.");
   irA("viajes");
+});
+/* Pedirlo directo al dueño por WhatsApp: abre el chat con origen, destino,
+   precio fijo y datos, y avisa al dueño en la app. */
+$("#btn-wa-dueno").addEventListener("click", () => {
+  const me = yo(); if (!me) return;
+  const origen = $("#f-origen").value.trim();
+  const destino = $("#f-destino").value.trim();
+  if (!origen || !destino){ toast("Primero escribe origen y destino."); return; }
+  if (!rutaCalculada){ toast("Primero pulsa «Calcular distancia y precio» para calcular tu viaje."); return; }
+  avisarDuenoWhatsApp();
+  window.open(waDuenoLink(textoWhatsAppDueno()), "_blank");
 });
 $("#sw-disponible").addEventListener("change", e => {
   disponible = e.target.checked;
